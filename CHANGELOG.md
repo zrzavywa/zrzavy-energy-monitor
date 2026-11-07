@@ -6,7 +6,23 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
-Keine Änderungen seit 4.6.0.
+### Betrieb
+
+- Referenzinstallation am 2026-11-07 auf 4.6.0 gehoben: Release-Verzeichnis
+  `releases/4.6.0` aus dem veröffentlichten Archiv, `current` umgeschaltet,
+  Healthcheck meldet `version=4.6.0`. Gemessen danach Live 0,06 s, Tag 0,06 s,
+  Woche 0,30 s, Monat 0,33 s, Jahr 7,09 s.
+- Der Versuch, die Datenbank zu bereinigen, wurde im Wartungsfenster
+  abgebrochen: Das Kopieren der 6 GB dauerte rund zehn Minuten, die
+  anschließende `quick_check`-Prüfung der Sicherung war nach 25 Minuten nicht
+  abgeschlossen. Der Dienst wurde wieder gestartet, die Datenbank ist
+  unverändert (die Tabelle `lost_and_found` mit 120 565 Zeilen besteht
+  weiterhin). Während des Fensters entstand eine Aufzeichnungslücke von rund
+  55 Minuten. Ein neues Fenster braucht 60 bis 120 Minuten; das Vorgehen steht
+  in `docs/operation.md`.
+- Der Update-Status der Installation nennt weiterhin `installed_version: 4.5.3`,
+  obwohl 4.6.0 läuft. Ursache ist der bekannte Updater-Statusfehler; die
+  Anzeige ist damit unzuverlässig, die installierte Version nicht.
 
 ## [4.6.0] - 2026-11-07
 

@@ -183,6 +183,30 @@ du -sh /var/cache/zrzavy-energy-monitor
 
 Alte Release-Downloads im Cache können nach erfolgreicher Sicherung und Prüfung entfernt werden. Das aktive Release, das unmittelbar vorherige Release und mindestens ein funktionierendes Backup sollten erhalten bleiben.
 
+## Wartungsfenster für die Datenbank
+
+Ein `VACUUM` schreibt die Datenbank vollständig neu und braucht während der
+Laufzeit exklusiven Zugriff: Der Dienst muss stehen. Auf der Referenzinstallation
+liegt die Datenbank mit rund 6 GB auf einem USB-Datenträger mit etwa 4–10 MB/s
+Schreibrate. Dort dauerte allein das Kopieren der Datei rund zehn Minuten, und
+eine vollständige `PRAGMA quick_check`-Prüfung der Sicherung war nach 25 Minuten
+noch nicht abgeschlossen.
+
+Daraus folgt für Wartungsarbeiten:
+
+- Fenster von mindestens 60 bis 120 Minuten einplanen, nicht von Minuten.
+- Lange Schritte abgekoppelt starten (`setsid nohup … > /var/log/… 2>&1 &`) und
+  über eine Logdatei verfolgen. Eine abreißende SSH-Verbindung darf die Wartung
+  weder beenden noch den Dienst gestoppt zurücklassen.
+- Die Sicherung zunächst ohne Dienstunterbrechung prüfen: Die Kopie ist
+  unabhängig von der laufenden Instanz lesbar, ein `quick_check` darauf braucht
+  also kein Wartungsfenster.
+- Nach jedem Schritt prüfen, ob Dienst und Healthcheck wieder antworten; bei
+  Überschreitung des Fensters abbrechen und den Dienst zuerst starten.
+- Ein Abbruch vor dem `VACUUM` verändert die Datenbank nicht. Ein
+  Aufbewahrungs- oder Aufräumschritt ist erst wirksam, wenn das `VACUUM`
+  anschließend läuft.
+
 ## Regelmäßige Betriebsprüfung
 
 Empfohlen mindestens monatlich:
@@ -196,3 +220,7 @@ Empfohlen mindestens monatlich:
 - Backup ist vorhanden.
 - Update-Status enthält keinen dauerhaften Fehler.
 - Raspberry Pi und Abhängigkeiten erhalten Sicherheitsupdates.
+
+## Dokument-Change-Log
+
+- 2026-11-07 — Abschnitt „Wartungsfenster für die Datenbank" mit gemessenen Wartezeiten und Abbruchregeln ergänzt; Anlass/Quelle: Wartungsversuch auf der Referenzinstallation (6 GB, USB, `quick_check` > 25 min); Prüfstatus: Messwerte aus dem Betriebsprotokoll, Vorgehen angewandt und dokumentiert.
