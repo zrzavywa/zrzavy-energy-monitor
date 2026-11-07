@@ -78,6 +78,71 @@ class ConfigStub:
         self.saved.append(deepcopy(config))
 
 
+ENERGY_KEYS = (
+    "solar_wh",
+    "house_wh",
+    "grid_import_wh",
+    "feed_in_wh",
+    "self_consumption_wh",
+    "shelly_solar_wh",
+    "solakon_pv_wh",
+    "solakon_ac_wh",
+    "battery_charge_wh",
+    "battery_discharge_wh",
+)
+
+
+def _hour_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fold sample rows into the hourly aggregate shape used by the dashboard."""
+
+    buckets: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        hour_start = int(float(row["ts_epoch"]) // 3600)
+        bucket = buckets.get(hour_start)
+        if bucket is None:
+            bucket = {
+                "hour_start": hour_start,
+                "sample_count": 0,
+                "soc_sum": 0.0,
+                "soc_count": 0,
+                "soc_min": None,
+                "soc_max": None,
+                "difference_sum": 0.0,
+                "difference_count": 0,
+                "difference_pct_sum": 0.0,
+                "difference_pct_count": 0,
+            }
+            for key in ENERGY_KEYS:
+                bucket[key] = 0.0
+            buckets[hour_start] = bucket
+        bucket["sample_count"] += 1
+        for key in ENERGY_KEYS:
+            bucket[key] += float(row.get(key) or 0.0)
+        soc = row.get("solakon_battery_soc_pct")
+        if soc is not None:
+            bucket["soc_sum"] += float(soc)
+            bucket["soc_count"] += 1
+            bucket["soc_min"] = (
+                float(soc)
+                if bucket["soc_min"] is None
+                else min(bucket["soc_min"], float(soc))
+            )
+            bucket["soc_max"] = (
+                float(soc)
+                if bucket["soc_max"] is None
+                else max(bucket["soc_max"], float(soc))
+            )
+        difference = row.get("solar_difference_w")
+        if difference is not None:
+            bucket["difference_sum"] += float(difference)
+            bucket["difference_count"] += 1
+        difference_pct = row.get("solar_difference_pct")
+        if difference_pct is not None:
+            bucket["difference_pct_sum"] += float(difference_pct)
+            bucket["difference_pct_count"] += 1
+    return [buckets[key] for key in sorted(buckets)]
+
+
 class DatabaseStub:
     def __init__(self) -> None:
         self.latest_value: dict[str, Any] | None = None
@@ -91,6 +156,28 @@ class DatabaseStub:
     def rows_between(self, start: float, end: float) -> list[dict[str, Any]]:
         self.bounds = (start, end)
         return deepcopy(self.rows)
+
+    def aggregate_samples_by_hour(
+        self,
+        start: float,
+        end: float,
+    ) -> list[dict[str, Any]]:
+        self.bounds = (start, end)
+        return _hour_rows(self.rows)
+
+    def latest_sample_sources(
+        self,
+        start: float,
+        end: float,
+    ) -> dict[str, Any] | None:
+        self.bounds = (start, end)
+        if not self.rows:
+            return None
+        newest = max(self.rows, key=lambda row: float(row["ts_epoch"]))
+        return {
+            "solar_source": newest.get("solar_source"),
+            "grid_source": newest.get("grid_source"),
+        }
 
     def stats(self) -> dict[str, Any]:
         return {

@@ -254,9 +254,10 @@ Finding-Strukturen sind erweiterbar.
   Dashboard-Zeitreihe; unversioniert.
 - **Pfadparameter:** keine.
 - **Queryparameter:** `period` mit Default `day` und erlaubten Werten `day`,
-  `week`, `year`; andere Werte fallen auf `day` zurück. `anchor` ist ein
-  Datum `YYYY-MM-DD`; fehlende oder ungültige Werte fallen auf das aktuelle
-  lokale Datum zurück.
+  `week`, `month`, `year`; andere Werte fallen auf `day` zurück. `anchor` ist
+  ein Datum `YYYY-MM-DD`; fehlende oder ungültige Werte fallen auf das
+  aktuelle lokale Datum zurück. `month` liefert einen Tagesbucket je
+  Kalendertag des Monats, der `anchor` enthält.
 - **Request:** kein Body.
 - **Erfolg:** `200`; mindestens `period`, `anchor`, `title`, `labels`,
   Zeitreihen und `kpi`. Ein leerer Zeitraum enthält eine Sample-Anzahl von
@@ -267,7 +268,9 @@ Finding-Strukturen sind erweiterbar.
   `kWh` gemäß Feldsuffix; lokale Datumsgrenzen und ISO-Datum für `anchor`;
   Netzvorzeichen wie oben.
 - **Seiteneffekt und Sicherheit:** lesender Zugriff auf aggregierte
-  Messhistorie, ohne Zugriffsschutz.
+  Messhistorie, ohne Zugriffsschutz. Die Aggregation läuft in SQLite und
+  überträgt je Stunde einen Aggregatsatz; die Antwortzeit hängt damit nicht
+  mehr von der Anzahl der Rohzeilen im Zeitraum ab.
 - **Synthetisches Beispiel:** `GET
   /api/dashboard?period=day&anchor=2026-07-27` liefert unter anderem
   `{"period":"day","anchor":"2026-07-27","labels":["00:00"],"kpi":{"sample_count":0}}`.
@@ -344,9 +347,11 @@ Finding-Strukturen sind erweiterbar.
 
 - **Klassifikation, Zweck und Stabilität:** `ui_internal_read`; gebuckette
   Phasenmittelwerte; unversioniert.
-- **Queryparameter:** `period` Default `day`, erlaubt `day`, `week`, `year`,
-  sonst Fallback `day`; `anchor` wie beim Dashboard; `source` Default
-  `house_meter` und Normalisierung wie bei `/api/phases/live`.
+- **Queryparameter:** `period` Default `day`, erlaubt `day`, `week`,
+  `month`, `year`, sonst Fallback `day`; `anchor` wie beim Dashboard;
+  `source` Default `house_meter` und Normalisierung wie bei
+  `/api/phases/live`. Die Web-Oberfläche fragt den Phasenverlauf für die
+  Jahresansicht nicht ab.
 - **Request:** kein Body.
 - **Erfolg:** `200`; `period`, `anchor`, `title`, `source_id`, `labels`,
   `series` mit `l1_power_w` bis `l3_power_w` sowie `summary` mit Sample- und
@@ -625,3 +630,7 @@ produktiver Nutzung erneut geprüft werden.
 - `/api/delete-all` hat keine eingebaute Bestätigung oder Wiederherstellung.
 - Eine geplante versionierte und authentifizierte Integrations-API ist nicht
   Bestandteil des Verhaltens von Version 4.5.
+
+## Dokument-Change-Log
+
+- 2026-11-07 — `period` um `month` ergänzt, Aggregationshinweis für `/api/dashboard` und Hinweis zur Jahresansicht der Phasen-API aufgenommen; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Latenzanalyse; Prüfstatus: Code und Tests abgeglichen, `./scripts/verify.sh` PASS.

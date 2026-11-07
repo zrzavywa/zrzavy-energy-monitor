@@ -504,6 +504,59 @@ code { background: #e7ecea; border-radius: 6px; padding: 3px 6px; }
   margin-top: 3px;
   max-width: 460px;
 }
+.values-table-wrap {
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.values-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.values-table th,
+.values-table td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.values-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  z-index: 1;
+}
+.values-table thead th:first-child,
+.values-table tbody th,
+.values-table tfoot th {
+  text-align: left;
+}
+.values-table tbody th {
+  font-weight: 600;
+}
+.values-table tbody tr:hover {
+  background: #f5f8f6;
+}
+.values-table tfoot th,
+.values-table tfoot td {
+  border-top: 2px solid var(--line);
+  font-weight: 700;
+}
+.values-empty {
+  text-align: left;
+  color: var(--muted);
+}
+body.is-loading .values-panel,
+body.is-loading .chart-panel {
+  opacity: .7;
+  transition: opacity .15s ease-in;
+}
 .validation-decision {
   display: inline-flex;
   border-radius: 999px;

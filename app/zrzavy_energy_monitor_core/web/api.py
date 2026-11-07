@@ -82,6 +82,24 @@ class PhaseDatabaseApi(Protocol):
     ) -> list[dict[str, Any]]:
         """Return persisted phase rows for one source and time range."""
 
+    def aggregate_phase_by_hour(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        """Return persisted phase power aggregated per UTC hour."""
+
+    def latest_phase_row_between(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> dict[str, Any] | None:
+        """Return the newest persisted phase row inside a time range."""
+
 
 def build_start_api_response(
     collector: CollectorApi,
@@ -395,7 +413,7 @@ def build_dashboard_api_response(
     anchor_value: str | None,
 ) -> dict[str, Any]:
     """Build the existing dashboard API payload."""
-    if period not in {"day", "week", "year"}:
+    if period not in {"day", "week", "month", "year"}:
         period = "day"
 
     anchor = parse_anchor(anchor_value)
@@ -428,12 +446,17 @@ def build_phase_dashboard_api_response(
 ) -> dict[str, Any]:
     """Aggregate persisted phase power into dashboard period buckets."""
 
-    if period not in {"day", "week", "year"}:
+    if period not in {"day", "week", "month", "year"}:
         period = "day"
     normalized_source = _phase_source_id(source_id)
     anchor = parse_anchor(anchor_value)
     start, end, labels, title = period_bounds(period, anchor)
-    rows = database.phase_rows_between(
+    hours = database.aggregate_phase_by_hour(
+        start.timestamp(),
+        end.timestamp(),
+        source_id=normalized_source,
+    )
+    latest_row = database.latest_phase_row_between(
         start.timestamp(),
         end.timestamp(),
         source_id=normalized_source,
@@ -444,36 +467,33 @@ def build_phase_dashboard_api_response(
     total_sums = {phase: 0.0 for phase in _PHASE_NAMES}
     total_counts = {phase: 0 for phase in _PHASE_NAMES}
     suspect_samples = 0
+    sample_count = 0
     max_spread_w: float | None = None
 
-    for row in rows:
-        sample_time = datetime.fromtimestamp(
-            float(row["ts_epoch"]),
-            tz=start.tzinfo,
+    for hour in hours:
+        index = bucket_index(
+            period,
+            start,
+            datetime.fromtimestamp(float(hour["hour_start"]) * 3600).astimezone(),
         )
-        index = bucket_index(period, start, sample_time)
         if not 0 <= index < len(labels):
             continue
 
-        if any(
-            row.get(f"{phase}_quality")
-            in {"suspect", "rejected", "stale", "unavailable"}
-            for phase in _PHASE_NAMES
-        ):
-            suspect_samples += 1
-
-        spread = _optional_float(row.get("phase_power_spread_w"))
+        sample_count += int(hour["sample_count"] or 0)
+        suspect_samples += int(hour["suspect_sample_count"] or 0)
+        spread = _optional_float(hour.get("max_spread_w"))
         if spread is not None:
             max_spread_w = spread if max_spread_w is None else max(max_spread_w, spread)
 
         for phase in _PHASE_NAMES:
-            value = _optional_float(row.get(f"{phase}_power_w"))
-            if value is None:
+            phase_count = int(hour[f"{phase}_power_count"] or 0)
+            if not phase_count:
                 continue
-            sums[phase][index] += value
-            counts[phase][index] += 1
-            total_sums[phase] += value
-            total_counts[phase] += 1
+            phase_sum = float(hour[f"{phase}_power_sum"] or 0.0)
+            sums[phase][index] += phase_sum
+            counts[phase][index] += phase_count
+            total_sums[phase] += phase_sum
+            total_counts[phase] += phase_count
 
     series = {
         f"{phase}_power_w": [
@@ -501,11 +521,11 @@ def build_phase_dashboard_api_response(
         "labels": labels,
         "series": series,
         "summary": {
-            "sample_count": len(rows),
+            "sample_count": sample_count,
             "suspect_sample_count": suspect_samples,
             "average_power_w": averages,
             "max_spread_w": max_spread_w,
-            "latest": _phase_api_row(rows[-1]) if rows else None,
+            "latest": _phase_api_row(latest_row),
         },
     }
 

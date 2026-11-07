@@ -4,12 +4,13 @@
   <div>
     <p class="eyebrow">ENERGIEÜBERSICHT</p>
     <h1>Dashboard</h1>
-    <p>Live-Leistung, Solakon-ONE-Status und Auswertung für Tag, Woche und Jahr.</p>
+    <p>Live-Leistung, Solakon-ONE-Status und Auswertung für Tag, Woche, Monat und Jahr.</p>
   </div>
   <div class="period-controls">
     <div class="segmented">
       <button data-period="day" class="active">Tag</button>
       <button data-period="week">Woche</button>
+      <button data-period="month">Monat</button>
       <button data-period="year">Jahr</button>
     </div>
     <div class="date-nav">
@@ -223,6 +224,34 @@
   <div class="chart-wrap">
     <canvas id="energy-chart" height="340"></canvas>
     <div id="chart-empty" class="chart-empty">Für diesen Zeitraum sind noch keine Energiedaten vorhanden.</div>
+  </div>
+</section>
+
+<section class="panel values-panel">
+  <div class="panel-head">
+    <div>
+      <p class="eyebrow">WERTE</p>
+      <h2 id="values-title">Werte im Zeitraum</h2>
+      <p>Zahlenwerte des gewählten Zeitraums in kWh, unabhängig vom Diagramm ablesbar.</p>
+    </div>
+  </div>
+  <div class="values-table-wrap">
+    <table class="values-table">
+      <thead>
+        <tr>
+          <th scope="col">Zeitraum</th>
+          <th scope="col">Erzeugung</th>
+          <th scope="col">Hausverbrauch</th>
+          <th scope="col">Netzbezug</th>
+          <th scope="col">Einspeisung</th>
+          <th scope="col">Eigenverbrauch</th>
+        </tr>
+      </thead>
+      <tbody id="values-body">
+        <tr><td colspan="6" class="values-empty">Noch keine Werte geladen.</td></tr>
+      </tbody>
+      <tfoot id="values-foot"></tfoot>
+    </table>
   </div>
 </section>
 
