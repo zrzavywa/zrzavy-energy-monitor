@@ -6,7 +6,9 @@ version information, and collector status exposed to HTML templates.
 
 from __future__ import annotations
 
-from typing import Any
+import hashlib
+from pathlib import Path
+from typing import Any, Final
 
 from zrzavy_energy_monitor_core.branding import (
     LEGACY_PRODUCT_NAME,
@@ -16,16 +18,38 @@ from zrzavy_energy_monitor_core.branding import (
     PRODUCT_NAME,
 )
 
+# Frontend assets whose content decides the cache-busting token.
+VERSIONED_ASSETS: Final = ("app.css", "dashboard.js", "update.js")
+
+
+def compute_asset_version(static_directory: Path) -> str:
+    """Return a short digest over the served frontend assets.
+
+    Browsers keep `dashboard.js` and `app.css` because their names do not change
+    between releases. The templates append this digest as a query parameter so a
+    deployment invalidates the cached files without a manual hard reload.
+    """
+
+    digest = hashlib.sha256()
+    for name in VERSIONED_ASSETS:
+        digest.update(name.encode("utf-8"))
+        path = static_directory / name
+        if path.is_file():
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
 
 def build_template_context(
     config: dict[str, Any],
     collector_running: bool,
     app_version: str,
+    asset_version: str,
     device_types: dict[str, str],
 ) -> dict[str, Any]:
     """build_template_context provides the public operation implemented by this component."""
     return {
         "app_version": app_version,
+        "asset_version": asset_version,
         "product_name": PRODUCT_NAME,
         "product_id": PRODUCT_ID,
         "product_description": PRODUCT_DESCRIPTION,

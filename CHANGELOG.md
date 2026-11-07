@@ -6,6 +6,17 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Behoben
+
+- Die Live-Ansicht antwortete auf der Referenzinstallation rund 6 Sekunden.
+  Ursache war die Abfrage des letzten Netzanschluss-Datensatzes: Sie sortierte
+  alle 224 000 Detailzeilen über `samples.ts_epoch` (`SCAN` +
+  `USE TEMP B-TREE FOR ORDER BY`, 5,7 s). Die Suche nach dem jeweils neuesten
+  Detaildatensatz betrachtet jetzt nur die jüngsten 200 Messungen über
+  `idx_samples_ts_epoch` und bleibt damit bei der Semantik „neuester
+  Zeitstempel"; gemessen 0,001 s statt 5,66 s. Dieselbe Abfrageform gilt für
+  Phasen- und Energiebilanz-Detailsätze.
+
 ### Hinzugefügt
 
 - Dashboard: Zeitraumauswahl `Monat` mit einem Bucket je Kalendertag sowie
@@ -27,6 +38,9 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - Die Web-Oberfläche lädt Energie- und Phasenansicht parallel, aktualisiert
   den gewählten Zeitraum nicht mehr minütlich in der Jahresansicht und fragt
   den Phasenverlauf für die Jahresansicht nicht mehr ab.
+- `app.css`, `dashboard.js` und `update.js` werden mit einem aus ihrem Inhalt
+  berechneten Token ausgeliefert. Nach einem Update laden Browser die neuen
+  Dateien selbstständig; ein manuelles Hartladen entfällt.
 
 ### Betrieb
 
@@ -273,3 +287,4 @@ Hardwarevalidierung ist nicht Bestandteil dieses Releasevorbereitungslaufs.
 - 2026-11-07 — Unreleased-Eintrag zum Datenbankstart-Inspektionspfad ergänzt; Anlass/Quelle: verifizierter Produktions-Codevergleich mit GitHub; Prüfstatus: Implementierung, Tests und Dokumentation abgeglichen.
 - 2026-11-07 — Unreleased-Einträge zu Monatsansicht, Wertetabelle und SQL-Aggregation ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Analyse der Dashboard-Latenzen; Prüfstatus: Implementierung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 - 2026-11-07 — Abschnitt „Betrieb" mit Deployment-Stand, Messwerten, Rollback und Update-Hinweis ergänzt; Anlass/Quelle: freigegebenes Deployment auf der Referenzinstallation; Prüfstatus: Deployment und Messung verifiziert, Sicherung vorhanden.
+- 2026-11-07 — Einträge zu Live-Latenz (Abfrageplan des letzten Detaildatensatzes) und Asset-Token ergänzt; Anlass/Quelle: Messung des Query-Plans auf der Referenzinstallation und Betreiberfreigabe; Prüfstatus: Tests und Messung auf dem Host, Deployment nach Freigabe.
