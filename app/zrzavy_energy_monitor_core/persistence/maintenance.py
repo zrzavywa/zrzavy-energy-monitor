@@ -505,7 +505,9 @@ def plan_retention(
         dependent = {
             name: connection.execute(
                 "SELECT COUNT(*) FROM "
-                f"{name} WHERE sample_id IN (SELECT id FROM samples WHERE ts_epoch < ?)",
+                f"{name} AS dependent "
+                "JOIN samples AS s ON s.id = dependent.sample_id "
+                "WHERE s.ts_epoch < ?",
                 (cutoff,),
             ).fetchone()[0]
             for name in _sample_dependent_tables(connection)
@@ -557,8 +559,11 @@ def apply_retention(
             for name in _sample_dependent_tables(connection):
                 cursor = connection.execute(
                     "DELETE FROM "
-                    f"{name} WHERE sample_id IN ("
-                    "SELECT id FROM samples WHERE ts_epoch < ?)",
+                    f"{name} WHERE rowid IN ("
+                    "SELECT dependent.rowid FROM "
+                    f"{name} AS dependent "
+                    "JOIN samples AS s ON s.id = dependent.sample_id "
+                    "WHERE s.ts_epoch < ?)",
                     (plan.cutoff_epoch,),
                 )
                 if cursor.rowcount > 0:

@@ -8,6 +8,16 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.6.3] — 2026-11-07
+
+### Behoben
+
+- Zählung und Löschung der abhängigen Zeilen laufen über einen Join auf
+  `samples` statt über eine `IN`-Unterabfrage. Gemessen auf der
+  Referenzdatenbank: 0,9 s statt 13,3 s pro Tabelle bei 181 226 abgelaufenen
+  Zeilen, weil der Join den vorhandenen Index auf `sample_id` als
+  Deckungsindex nutzt.
+
 ## [4.6.2] — 2026-11-07
 
 ### Behoben
