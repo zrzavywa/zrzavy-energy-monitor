@@ -28,6 +28,16 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
   den gewählten Zeitraum nicht mehr minütlich in der Jahresansicht und fragt
   den Phasenverlauf für die Jahresansicht nicht mehr ab.
 
+### Betrieb
+
+- Referenzinstallation (Raspberry Pi OS): Das Release-Verzeichnis `4.5.5`
+  wurde am 2026-11-07 mit dem Stand von `main` (`dd8442b`) aktualisiert —
+  sieben Dateien, Sicherung unter `/var/backups/zem-deploy-20261107-1252`.
+  Gemessen danach: Tag 0,06 s, Woche 0,27 s, Monat 0,34 s, Jahr 6,94 s.
+  Rollback: `before.tar` über das Release-Verzeichnis entpacken und den Dienst
+  neu starten. Ein späteres reguläres Update auf 4.5.5 würde diese lokalen
+  Dateien überschreiben; der nächste Release muss diesen Stand enthalten.
+
 ## [4.5.5] - 2026-07-29
 
 ### Behoben
@@ -261,4 +271,5 @@ Hardwarevalidierung ist nicht Bestandteil dieses Releasevorbereitungslaufs.
 ## Dokument-Change-Log
 
 - 2026-11-07 — Unreleased-Eintrag zum Datenbankstart-Inspektionspfad ergänzt; Anlass/Quelle: verifizierter Produktions-Codevergleich mit GitHub; Prüfstatus: Implementierung, Tests und Dokumentation abgeglichen.
-- 2026-11-07 — Unreleased-Einträge zu Monatsansicht, Wertetabelle und SQL-Aggregation ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Analyse der Dashboard-Latenzen; Prüfstatus: Implementierung und Tests abgeglichen, `./scripts/verify.sh` PASS, Produktionsmessung der neuen Latenz ausstehend.
+- 2026-11-07 — Unreleased-Einträge zu Monatsansicht, Wertetabelle und SQL-Aggregation ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Analyse der Dashboard-Latenzen; Prüfstatus: Implementierung und Tests abgeglichen, `./scripts/verify.sh` PASS.
+- 2026-11-07 — Abschnitt „Betrieb" mit Deployment-Stand, Messwerten, Rollback und Update-Hinweis ergänzt; Anlass/Quelle: freigegebenes Deployment auf der Referenzinstallation; Prüfstatus: Deployment und Messung verifiziert, Sicherung vorhanden.
