@@ -28,27 +28,42 @@ mkdir -p "$PACKAGE_DIR"
 
 mkdir -p "$PACKAGE_DIR/app"
 
-rsync -a \
-  --exclude='config.json' \
-  --exclude='config.local.json' \
-  --exclude='data/' \
-  --exclude='logs/' \
-  --exclude='__pycache__/' \
-  --exclude='*.pyc' \
-  --exclude='*.pyo' \
-  --exclude='*.log' \
-  --exclude='*.db' \
-  --exclude='*.sqlite' \
-  --exclude='*.sqlite3' \
-  "$ROOT_DIR/app/" \
-  "$PACKAGE_DIR/app/"
+APP_EXCLUDES=(
+  --exclude='config.json'
+  --exclude='config.local.json'
+  --exclude='data/'
+  --exclude='logs/'
+  --exclude='__pycache__/'
+  --exclude='*.pyc'
+  --exclude='*.pyo'
+  --exclude='*.log'
+  --exclude='*.db'
+  --exclude='*.sqlite'
+  --exclude='*.sqlite3'
+)
 
-rsync -a \
-  --exclude='Upgrade-SolarInspector-RaspberryPi.sh' \
-  --exclude='Rollback-SolarInspector-RaspberryPi.sh' \
-  --exclude='Diagnose-SolarInspector-RaspberryPi.sh' \
-  "$ROOT_DIR/scripts/" \
-  "$PACKAGE_DIR/scripts/"
+# rsync keeps the tree identical on hosts that have it; tar carries the same
+# exclude list where rsync is absent (minimal images, build containers).
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a "${APP_EXCLUDES[@]}" "$ROOT_DIR/app/" "$PACKAGE_DIR/app/"
+else
+  tar -C "$ROOT_DIR/app" -cf - "${APP_EXCLUDES[@]}" . \
+    | tar -C "$PACKAGE_DIR/app" -xf -
+fi
+
+SCRIPT_EXCLUDES=(
+  --exclude='Upgrade-SolarInspector-RaspberryPi.sh'
+  --exclude='Rollback-SolarInspector-RaspberryPi.sh'
+  --exclude='Diagnose-SolarInspector-RaspberryPi.sh'
+)
+
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a "${SCRIPT_EXCLUDES[@]}" "$ROOT_DIR/scripts/" "$PACKAGE_DIR/scripts/"
+else
+  mkdir -p "$PACKAGE_DIR/scripts"
+  tar -C "$ROOT_DIR/scripts" -cf - "${SCRIPT_EXCLUDES[@]}" . \
+    | tar -C "$PACKAGE_DIR/scripts" -xf -
+fi
 cp -R "$ROOT_DIR/tools" "$PACKAGE_DIR/"
 cp -R "$ROOT_DIR/docs" "$PACKAGE_DIR/"
 cp -R "$ROOT_DIR/updater" "$PACKAGE_DIR/"

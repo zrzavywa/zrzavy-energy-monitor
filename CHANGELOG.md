@@ -43,6 +43,9 @@ Keine Änderungen.
 
 ### Betrieb
 
+- Der Release-Build (`scripts/build-release.sh`) nutzt `rsync`, wenn es
+  vorhanden ist, und fällt sonst auf `tar` mit derselben Ausschlussliste
+  zurück. Auf dem Build-Host fehlte `rsync`.
 - Referenzinstallation am 2026-11-07 auf 4.6.0 gehoben: Release-Verzeichnis
   `releases/4.6.0` aus dem veröffentlichten Archiv, `current` umgeschaltet,
   Healthcheck meldet `version=4.6.0`. Gemessen danach Live 0,06 s, Tag 0,06 s,
