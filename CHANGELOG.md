@@ -10,8 +10,12 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 - Phasenverlauf für die Jahresansicht: Die API aggregiert für `year` in SQL je
   lokalem Kalendermonat und liefert zwölf Monatsmittel der Momentanleistung
-  statt bis zu 8 760 Stundenzeilen. Vorher brauchte die Abfrage auf der
-  Referenzinstallation 39,1 s; die Jahresansicht lädt den Verlauf jetzt mit.
+  statt bis zu 8 760 Stundenzeilen. Auf der Referenzinstallation brauchte die
+  Abfrage vorher 39,1 s, jetzt 9,7 s (warm, drei Messungen). Ein schmaler
+  Deckungsindex auf den Phasenspalten bringt weitere Verbesserung auf 5,9 s
+  (gemessen an der Sicherungskopie, Indexaufbau 6,8 s), wurde aber nicht
+  eingebaut: der Gewinn von rund 3,8 s rechtfertigt die zusätzliche
+  Indexpflege auf dem Referenzgerät derzeit nicht.
 - Die Wochen- und Monatsansicht aktualisiert sich selbst — Woche alle fünf,
   Monat alle fünfzehn Minuten. Die Tagesansicht bleibt bei einer Minute. Eine
   Ansicht in der Vergangenheit wird nicht mehr automatisch neu geladen.
