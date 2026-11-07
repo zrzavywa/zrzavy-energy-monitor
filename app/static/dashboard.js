@@ -64,7 +64,7 @@ function isCurrentRequest(period, anchor) {
 // Day, week and month follow the running period; a period in the past never
 // refreshes. A request costs about 0.3 s, so one minute is cheap enough for
 // all three views.
-const REFRESH_INTERVALS = {day: 60000, week: 60000, month: 60000};
+const REFRESH_INTERVALS = {day: 15000, week: 15000, month: 15000};
 let nextAutoRefreshAt = 0;
 
 function periodStartKey(period, isoDate) {
@@ -91,7 +91,7 @@ function checkAutoRefresh() {
     return;
   }
   scheduleAutoRefresh();
-  loadDashboard();
+  loadDashboard({silent: true});
 }
 
 const VALUE_COLUMNS = [
@@ -124,15 +124,23 @@ function startLoading() {
   document.body.classList.add("is-loading");
 }
 
+function showUpdatedAt() {
+  const hint = document.getElementById("last-updated");
+  if (!hint) return;
+  hint.textContent = `Stand ${new Date().toLocaleTimeString("de-DE")}`;
+}
+
 function stopLoading() {
   pendingLoads = Math.max(0, pendingLoads - 1);
   if (pendingLoads === 0) document.body.classList.remove("is-loading");
 }
 
-async function loadDashboard() {
+async function loadDashboard({silent = false} = {}) {
   const period = state.period;
   const anchor = state.anchor;
-  startLoading();
+  // An automatic reload keeps the previous numbers on screen instead of
+  // dimming the panels every few seconds.
+  if (!silent) startLoading();
   const dashboardRequest = fetch(`/api/dashboard?period=${period}&anchor=${anchor}`)
     .then(response => {
       if (!response.ok) throw new Error("Dashboard konnte nicht geladen werden.");
@@ -142,14 +150,19 @@ async function loadDashboard() {
       if (!isCurrentRequest(period, anchor)) return;
       state.dashboard = data;
       renderDashboard();
+      showUpdatedAt();
     })
     .catch(() => {
       if (!isCurrentRequest(period, anchor)) return;
       const empty = document.getElementById("chart-empty");
       if (empty) empty.style.display = "grid";
     })
-    .finally(stopLoading);
-  const phaseRequest = loadPhaseDashboard().finally(stopLoading);
+    .finally(() => {
+      if (!silent) stopLoading();
+    });
+  const phaseRequest = loadPhaseDashboard({silent}).finally(() => {
+    if (!silent) stopLoading();
+  });
   scheduleAutoRefresh();
   await Promise.all([dashboardRequest, phaseRequest]);
 }
@@ -623,7 +636,7 @@ window.addEventListener("resize", () => {
 loadDashboard();
 loadLive();
 setInterval(loadLive, 5000);
-setInterval(checkAutoRefresh, 10000);
+setInterval(checkAutoRefresh, 5000);
 
 async function loadValidationSummary() {
   const status = document.getElementById("validation-status");

@@ -16,9 +16,12 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
   (gemessen an der Sicherungskopie, Indexaufbau 6,8 s), wurde aber nicht
   eingebaut: der Gewinn von rund 3,8 s rechtfertigt die zusätzliche
   Indexpflege auf dem Referenzgerät derzeit nicht.
-- Tag, Woche und Monat aktualisieren sich selbst im Minutentakt; ein Request
-  kostet rund 0,3 s. Die Jahresansicht lädt nicht automatisch. Eine Ansicht in
-  der Vergangenheit wird nicht neu geladen.
+- Tag, Woche und Monat aktualisieren sich alle 15 s selbst; ein Request
+  kostet gemessen 0,36 s (Woche) bzw. 0,43 s (Monat) über das Netz. Die
+  Jahresansicht lädt nicht automatisch, eine Ansicht in der Vergangenheit
+  ebenso wenig. Automatische Aktualisierungen laufen ohne Ladeabblendung, die
+  Panels bleiben also lesbar; neben dem Periodentitel steht der Zeitpunkt der
+  letzten Aktualisierung.
 
 ### Betrieb
 

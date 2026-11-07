@@ -552,6 +552,12 @@ code { background: #e7ecea; border-radius: 6px; padding: 3px 6px; }
   text-align: left;
   color: var(--muted);
 }
+.updated-hint {
+  margin: .25rem 0 0;
+  font-size: .78rem;
+  color: var(--muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
 body.is-loading .values-panel,
 body.is-loading .chart-panel {
   opacity: .7;
