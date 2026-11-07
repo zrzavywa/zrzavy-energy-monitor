@@ -54,14 +54,17 @@ def prepare_database_for_startup(
 
     Raises:
         DatabaseStartupError: If creation, inspection, backup, migration,
-            target verification, or integrity checking fails. The original
-            exception is chained and no retry loop is started.
+            schema verification, or required migration integrity checking
+            fails. The original exception is chained and no retry loop is
+            started.
 
     Side Effects:
         A missing or zero-byte database receives the established Phase-09
         baseline. Every older schema, including that new baseline, is backed
-        up and migrated before return. A verified target database is read-only
-        checked and left byte-for-byte untouched.
+        up and migrated before return. A database already at the target schema
+        is read-only schema-verified without a full integrity scan or row
+        counts and is left byte-for-byte untouched. Pending migrations retain
+        full integrity and domain-row-count verification.
     """
 
     path = database_path.expanduser().resolve()
@@ -70,7 +73,11 @@ def prepare_database_for_startup(
     try:
         if created:
             Database(path)
-        before = inspect_database(path)
+        before = inspect_database(
+            path,
+            verify_integrity=False,
+            count_rows=False,
+        )
         if before.pending_migrations:
             migration = migrate_database_with_backup(
                 path,
@@ -88,7 +95,11 @@ def prepare_database_for_startup(
                 verify_schema(connection)
             applied_versions = ()
             backup_path = None
-        after = inspect_database(path)
+        after = inspect_database(
+            path,
+            verify_integrity=False,
+            count_rows=False,
+        )
         if after.current_schema_version != get_target_version():
             raise DatabaseStartupError(
                 "database startup did not reach the supported target schema"

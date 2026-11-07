@@ -10,6 +10,7 @@ import pytest
 import zrzavy_energy_monitor_core.persistence.startup as startup
 from zrzavy_energy_monitor_core.persistence.database import Database
 from zrzavy_energy_monitor_core.persistence.maintenance import (
+    DatabaseInspection,
     DatabaseMaintenanceError,
     inspect_database,
 )
@@ -81,11 +82,29 @@ def test_legacy_database_is_backed_up_before_migration(tmp_path: Path) -> None:
     assert inspect_database(database).table_counts["samples"] == 2
 
 
-def test_current_database_is_verified_without_backup_or_writes(
+def test_current_database_is_schema_verified_without_full_checks_or_writes(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     database = _current_database(tmp_path)
     before = database.read_bytes()
+    inspection_options: list[tuple[bool, bool]] = []
+    original_inspect = startup.inspect_database
+
+    def inspect_current_schema(
+        database_path: Path,
+        *,
+        verify_integrity: bool = True,
+        count_rows: bool = True,
+    ) -> DatabaseInspection:
+        inspection_options.append((verify_integrity, count_rows))
+        return original_inspect(
+            database_path,
+            verify_integrity=verify_integrity,
+            count_rows=count_rows,
+        )
+
+    monkeypatch.setattr(startup, "inspect_database", inspect_current_schema)
 
     first = prepare_database_for_startup(
         database,
@@ -101,6 +120,7 @@ def test_current_database_is_verified_without_backup_or_writes(
     assert first.applied_migration_versions == ()
     assert first.backup_path is None
     assert second.applied_migration_versions == ()
+    assert inspection_options == [(False, False)] * 4
     assert not (tmp_path / "backups").exists()
     assert database.read_bytes() == before
 

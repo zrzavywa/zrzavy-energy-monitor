@@ -24,14 +24,20 @@ can start against an unchecked schema.
 The startup state machine is:
 
 1. Missing or zero-byte path: create the established empty Phase-09 baseline.
-2. Open the file read-only and run integrity, version, plan, and central-table
-   readability checks.
+2. Open the file read-only and read the schema version, pending plan, and
+   central-table readability without a full `PRAGMA integrity_check` and
+   without table row counts.
 3. Older/unversioned schema: create and verify a private backup, then migrate
-   transactionally to schema 2.
+   transactionally to schema 2. The backup and migration path keeps the full
+   integrity check and the domain row-count comparison.
 4. Schema 2: verify the complete target schema without writing or creating a
-   redundant backup.
+   redundant backup. The already-current path skips the full integrity scan and
+   the row counts so restart cost does not grow with database size.
 5. Unknown newer, corrupt, incomplete, or failed migration: raise
-   `DatabaseStartupError` and abort process initialization.
+   `DatabaseStartupError` and abort process initialization. Because step 2
+   skips `PRAGMA integrity_check`, corruption that still lets the version,
+   plan, and schema queries succeed is not detected at startup; use the
+   maintenance CLI for a full check.
 6. Only after success, construct the normal `Database` and `Collector`.
 
 There is no retry loop. One process start attempts preparation once. When a
@@ -49,6 +55,10 @@ Startup compatibility is tested for a missing database, the characterized
 synthetic 4.1.3 shape, the Phase-09 intermediate schema, and current schema 2.
 An unknown schema 3 is rejected without backup or mutation. A forced migration
 failure is attempted exactly once and produces a chained, actionable error.
+The already-current path is asserted to call the read-only inspection with
+`verify_integrity=False` and `count_rows=False`, and `inspect_database`
+separately proves that a skipped check reports `not_checked` with an empty
+count mapping.
 
 ## Supported version 1 sources
 
@@ -232,10 +242,11 @@ confirm the target schema version. Every intermediate migration is executed a
 second time to prove that rows and schema objects are not duplicated. The
 older v3-style path separately verifies that later fields are not invented.
 
-Tests verify read-only inspection, private permissions, collision refusal,
-source immutability, backup-before-write notification, dry-run isolation,
-integrity and row-count comparison, retained backup after migration failure,
-CLI output, and nonzero failure exit status.
+Tests verify read-only inspection, optional integrity and row-count skipping,
+private permissions, collision refusal, source immutability,
+backup-before-write notification, dry-run isolation, integrity and row-count
+comparison, retained backup after migration failure, CLI output, and nonzero
+failure exit status.
 
 The user-authorized local `app/data/solarinspector.db` was additionally checked
 with `--database-info` and `--migrate-database --dry-run`. It was an empty
@@ -244,3 +255,7 @@ target schema 2 on the temporary copy. Its SHA-256 digest remained
 `c6862767d5b3783b4af8f1d74f84b55beafb20a6b493b5a762a2e6af400dc6dd`
 before and after. This is a local empty database check, not evidence from a
 productive or historical 4.1.x installation.
+
+## Dokument-Change-Log
+
+- 2026-11-07 — Startautomatik-Beschreibung an den optionalen Inspektionspfad angepasst und die verbleibende Startgrenze ergänzt; Anlass/Quelle: autorisierter Codevergleich der Produktion mit GitHub-Commit 3efcfc7; Prüfstatus: Implementierung, Tests und Dokumentation abgeglichen, Verifikation ausstehend.
