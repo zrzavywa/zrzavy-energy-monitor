@@ -8,6 +8,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.6.4] — 2026-11-07
+
+### Geändert
+
+- Tag, Woche und Monat aktualisieren sich im 60-Sekunden-Takt statt alle 15 s.
+  Der Sammler schreibt eine Messung pro Minute; häufigeres Neuladen zeigte
+  viermal denselben Wert.
+
 ## [4.6.3] — 2026-11-07
 
 ### Behoben

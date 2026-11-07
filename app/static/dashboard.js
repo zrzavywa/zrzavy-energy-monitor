@@ -62,9 +62,9 @@ function isCurrentRequest(period, anchor) {
 }
 
 // Day, week and month follow the running period; a period in the past never
-// refreshes. A request costs about 0.3 s, so one minute is cheap enough for
-// all three views.
-const REFRESH_INTERVALS = {day: 15000, week: 15000, month: 15000};
+// refreshes. The collector stores one measurement per minute, so refreshing
+// once a minute matches the data instead of re-rendering equal values.
+const REFRESH_INTERVALS = {day: 60000, week: 60000, month: 60000};
 let nextAutoRefreshAt = 0;
 
 function periodStartKey(period, isoDate) {
@@ -636,7 +636,7 @@ window.addEventListener("resize", () => {
 loadDashboard();
 loadLive();
 setInterval(loadLive, 5000);
-setInterval(checkAutoRefresh, 5000);
+setInterval(checkAutoRefresh, 10000);
 
 async function loadValidationSummary() {
   const status = document.getElementById("validation-status");
