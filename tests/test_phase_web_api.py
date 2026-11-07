@@ -23,6 +23,7 @@ class PhaseDatabaseStub:
         self.rows: list[dict[str, Any]] = []
         self.latest_source: str | None = None
         self.range_request: tuple[float, float, str] | None = None
+        self.aggregation_calls: list[str] = []
 
     def latest_phase_sample(
         self,
@@ -49,6 +50,7 @@ class PhaseDatabaseStub:
         source_id: str = "house_meter",
     ) -> list[dict[str, Any]]:
         self.range_request = (start_epoch, end_epoch, source_id)
+        self.aggregation_calls.append("hour")
         buckets: dict[int, dict[str, Any]] = {}
         for row in self.rows:
             hour_start = int(float(row["ts_epoch"]) // 3600)
@@ -87,6 +89,55 @@ class PhaseDatabaseStub:
                 bucket[f"{phase}_power_count"] += 1
         return [buckets[key] for key in sorted(buckets)]
 
+    def aggregate_phase_by_month(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        self.range_request = (start_epoch, end_epoch, source_id)
+        self.aggregation_calls.append("month")
+        buckets: dict[str, dict[str, Any]] = {}
+        for row in self.rows:
+            month_start = datetime.fromtimestamp(float(row["ts_epoch"])).strftime(
+                "%Y-%m"
+            )
+            bucket = buckets.get(month_start)
+            if bucket is None:
+                bucket = {
+                    "month_start": month_start,
+                    "sample_count": 0,
+                    "suspect_sample_count": 0,
+                    "max_spread_w": None,
+                }
+                for phase in ("l1", "l2", "l3"):
+                    bucket[f"{phase}_power_sum"] = 0.0
+                    bucket[f"{phase}_power_count"] = 0
+                buckets[month_start] = bucket
+            bucket["sample_count"] += 1
+            if any(
+                row.get(f"{phase}_quality")
+                in {"suspect", "rejected", "stale", "unavailable"}
+                for phase in ("l1", "l2", "l3")
+            ):
+                bucket["suspect_sample_count"] += 1
+            spread = row.get("phase_power_spread_w")
+            if spread is not None:
+                current = bucket["max_spread_w"]
+                bucket["max_spread_w"] = (
+                    float(spread)
+                    if current is None
+                    else max(float(current), float(spread))
+                )
+            for phase in ("l1", "l2", "l3"):
+                value = row.get(f"{phase}_power_w")
+                if value is None:
+                    continue
+                bucket[f"{phase}_power_sum"] += float(value)
+                bucket[f"{phase}_power_count"] += 1
+        return [buckets[key] for key in sorted(buckets)]
+
     def latest_phase_row_between(
         self,
         start_epoch: float,
@@ -99,6 +150,22 @@ class PhaseDatabaseStub:
             return None
         newest = max(self.rows, key=lambda row: float(row["ts_epoch"]))
         return dict(newest)
+
+
+def test_phase_dashboard_year_uses_monthly_aggregation() -> None:
+    """The year view asks for monthly buckets and fills all twelve labels."""
+
+    database = PhaseDatabaseStub()
+    database.rows = [_row(10), _row(11)]
+
+    response = build_phase_dashboard_api_response(database, "year", "2026-07-24")
+
+    assert database.aggregation_calls == ["month"]
+    assert len(response["labels"]) == 12
+    assert response["labels"][6] == "Jul"
+    assert response["series"]["l1_power_w"][6] == 100.0
+    assert response["series"]["l1_power_w"][5] is None
+    assert response["summary"]["sample_count"] == 2
 
 
 def _timestamp(hour: int) -> float:

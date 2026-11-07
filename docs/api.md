@@ -350,8 +350,9 @@ Finding-Strukturen sind erweiterbar.
 - **Queryparameter:** `period` Default `day`, erlaubt `day`, `week`,
   `month`, `year`, sonst Fallback `day`; `anchor` wie beim Dashboard;
   `source` Default `house_meter` und Normalisierung wie bei
-  `/api/phases/live`. Die Web-Oberfläche fragt den Phasenverlauf für die
-  Jahresansicht nicht ab.
+  `/api/phases/live`. Für `year` aggregiert die Datenbank direkt je
+  lokalem Kalendermonat (zwölf Zeilen statt bis zu 8 760 Stundenzeilen); die
+  Werte sind Monatsmittel der Momentanleistung, keine Monatsenergie.
 - **Request:** kein Body.
 - **Erfolg:** `200`; `period`, `anchor`, `title`, `source_id`, `labels`,
   `series` mit `l1_power_w` bis `l3_power_w` sowie `summary` mit Sample- und
@@ -633,4 +634,5 @@ produktiver Nutzung erneut geprüft werden.
 
 ## Dokument-Change-Log
 
+- 2026-11-07 — Phasen-API: `year` liefert Monatsmittel je Kalendermonat; Hinweis zur Jahresansicht ersetzt; Anlass/Quelle: Betreiberfreigabe für den Phasenverlauf im Jahr, Messung 39,1 s vor der SQL-Monatsaggregation; Prüfstatus: Code und Tests abgeglichen.
 - 2026-11-07 — `period` um `month` ergänzt, Aggregationshinweis für `/api/dashboard` und Hinweis zur Jahresansicht der Phasen-API aufgenommen; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Latenzanalyse; Prüfstatus: Code und Tests abgeglichen, `./scripts/verify.sh` PASS.
