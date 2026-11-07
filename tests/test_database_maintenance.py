@@ -58,6 +58,28 @@ def test_read_only_inspection_reports_integrity_plan_and_counts(
     assert (_digest(database), database.stat().st_mtime_ns) == before
 
 
+def test_inspection_can_skip_integrity_and_row_counts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    database = _legacy_database(tmp_path)
+
+    def fail_integrity_check(_connection: sqlite3.Connection) -> str:
+        raise AssertionError("integrity check must be skipped")
+
+    monkeypatch.setattr(maintenance, "_integrity_result", fail_integrity_check)
+
+    inspection = inspect_database(
+        database,
+        verify_integrity=False,
+        count_rows=False,
+    )
+
+    assert inspection.integrity_check == "not_checked"
+    assert inspection.current_schema_version == 0
+    assert inspection.table_counts == {}
+
+
 def test_backup_is_consistent_private_and_never_overwritten(
     tmp_path: Path,
 ) -> None:

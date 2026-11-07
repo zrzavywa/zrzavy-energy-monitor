@@ -6,7 +6,12 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
-Keine Änderungen.
+### Geändert
+
+- Der reguläre Start einer bereits aktuellen Datenbank führt kein vollständiges
+  PRAGMA integrity_check und keine Zeilenzählungen aus. Schema- und
+  Versionsprüfung bleiben aktiv; Migrations- und explizite Wartungspfade
+  behalten ihre vollständigen Integritäts- und Bestandsprüfungen.
 
 ## [4.5.5] - 2026-07-29
 
@@ -237,3 +242,7 @@ Hardwarevalidierung ist nicht Bestandteil dieses Releasevorbereitungslaufs.
 - Browserbasierte Bedienoberfläche mit Dashboard, Datenerfassung, Konfiguration und Datenverwaltung.
 - Unterstützung für Shelly PM Mini Gen 3, Shelly 3EM Gen 1 und Shelly Pro 3EM.
 - SQLite-Speicherung, CSV-Export und Demodaten.
+
+## Dokument-Change-Log
+
+- 2026-11-07 — Unreleased-Eintrag zum Datenbankstart-Inspektionspfad ergänzt; Anlass/Quelle: verifizierter Produktions-Codevergleich mit GitHub; Prüfstatus: Implementierung, Tests und Dokumentation abgeglichen.

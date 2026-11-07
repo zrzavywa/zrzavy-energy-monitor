@@ -39,7 +39,7 @@ class DatabaseMaintenanceError(RuntimeError):
 
 @dataclass(frozen=True)
 class DatabaseInspection:
-    """Describe read-only database integrity, schema, and row counts."""
+    """Describe read-only database integrity, schema, and optional row counts."""
 
     database_path: Path
     integrity_check: str
@@ -74,19 +74,28 @@ class MigrationRun:
     backup_path: Path | None
 
 
-def inspect_database(database_path: Path) -> DatabaseInspection:
+def inspect_database(
+    database_path: Path,
+    *,
+    verify_integrity: bool = True,
+    count_rows: bool = True,
+) -> DatabaseInspection:
     """Inspect a SQLite database without creating or modifying it.
 
     Args:
         database_path: Existing regular database file.
+        verify_integrity: Run SQLite's full PRAGMA integrity_check.
+        count_rows: Count rows in known readable tables.
 
     Returns:
-        Integrity result, schema versions, pending plan, and counts for known
-        readable tables. No row contents or secrets are returned.
+        Schema versions and pending plan, with optional integrity and table
+        counts. A skipped integrity check is reported as not_checked; a skipped
+        row-count pass returns an empty mapping. No row contents or secrets are
+        returned.
 
     Raises:
         DatabaseMaintenanceError: If the path is missing, not a regular file,
-            unreadable, or fails SQLite integrity checking.
+            unreadable, or a requested integrity check fails.
         DatabaseSchemaError: If version metadata is incompatible.
 
     Side Effects:
@@ -97,19 +106,25 @@ def inspect_database(database_path: Path) -> DatabaseInspection:
     path = _existing_database_path(database_path)
     try:
         with _read_only_connection(path) as connection:
-            integrity = _integrity_result(connection)
-            if integrity != "ok":
-                raise DatabaseMaintenanceError(
-                    f"database integrity check failed: {integrity}"
-                )
+            integrity = "not_checked"
+            if verify_integrity:
+                integrity = _integrity_result(connection)
+                if integrity != "ok":
+                    raise DatabaseMaintenanceError(
+                        f"database integrity check failed: {integrity}"
+                    )
             current_version = get_current_version(connection)
-            counts = {
-                table: int(
-                    connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                )
-                for table in _COUNTED_TABLES
-                if _table_exists(connection, table)
-            }
+            counts = {}
+            if count_rows:
+                counts = {
+                    table: int(
+                        connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[
+                            0
+                        ]
+                    )
+                    for table in _COUNTED_TABLES
+                    if _table_exists(connection, table)
+                }
     except sqlite3.DatabaseError as exc:
         raise DatabaseMaintenanceError(f"database cannot be inspected: {path}") from exc
     return DatabaseInspection(
