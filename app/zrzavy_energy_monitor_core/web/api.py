@@ -91,6 +91,15 @@ class PhaseDatabaseApi(Protocol):
     ) -> list[dict[str, Any]]:
         """Return persisted phase power aggregated per UTC hour."""
 
+    def aggregate_phase_by_month(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        """Return persisted phase power aggregated per local calendar month."""
+
     def latest_phase_row_between(
         self,
         start_epoch: float,
@@ -451,11 +460,18 @@ def build_phase_dashboard_api_response(
     normalized_source = _phase_source_id(source_id)
     anchor = parse_anchor(anchor_value)
     start, end, labels, title = period_bounds(period, anchor)
-    hours = database.aggregate_phase_by_hour(
-        start.timestamp(),
-        end.timestamp(),
-        source_id=normalized_source,
-    )
+    if period == "year":
+        buckets = database.aggregate_phase_by_month(
+            start.timestamp(),
+            end.timestamp(),
+            source_id=normalized_source,
+        )
+    else:
+        buckets = database.aggregate_phase_by_hour(
+            start.timestamp(),
+            end.timestamp(),
+            source_id=normalized_source,
+        )
     latest_row = database.latest_phase_row_between(
         start.timestamp(),
         end.timestamp(),
@@ -470,13 +486,16 @@ def build_phase_dashboard_api_response(
     sample_count = 0
     max_spread_w: float | None = None
 
-    for hour in hours:
-        index = bucket_index(
-            period,
-            start,
-            datetime.fromtimestamp(float(hour["hour_start"]) * 3600).astimezone(),
-        )
-        if not 0 <= index < len(labels):
+    for hour in buckets:
+        if period == "year":
+            index = _phase_month_index(str(hour.get("month_start") or ""), start)
+        else:
+            index = bucket_index(
+                period,
+                start,
+                datetime.fromtimestamp(float(hour["hour_start"]) * 3600).astimezone(),
+            )
+        if index is None or not 0 <= index < len(labels):
             continue
 
         sample_count += int(hour["sample_count"] or 0)
@@ -591,6 +610,22 @@ def _phase_source_id(value: str | None) -> str:
 
     normalized = (value or "house_meter").strip()
     return normalized[:120] or "house_meter"
+
+
+def _phase_month_index(month_key: str, start: datetime) -> int | None:
+    """Map a stored `YYYY-MM` key to the year bucket of its calendar month."""
+
+    year_text, separator, month_text = month_key.partition("-")
+    if not separator:
+        return None
+    try:
+        year = int(year_text)
+        month = int(month_text)
+    except ValueError:
+        return None
+    if year != start.year or not 1 <= month <= 12:
+        return None
+    return month - 1
 
 
 def _optional_float(value: object) -> float | None:

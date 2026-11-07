@@ -783,6 +783,53 @@ class Database:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def aggregate_phase_by_month(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        """Average persisted phase power per local calendar month.
+
+        Same aggregates as :meth:`aggregate_phase_by_hour`, grouped by the
+        stored local timestamp. A year therefore transfers twelve rows instead
+        of up to 8,760 hourly rows.
+        """
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT substr(samples.ts_local, 1, 7) AS month_start,
+                       COUNT(*) AS sample_count,
+                       SUM(COALESCE(phase_samples.l1_power_w, 0)) AS l1_power_sum,
+                       COUNT(phase_samples.l1_power_w) AS l1_power_count,
+                       SUM(COALESCE(phase_samples.l2_power_w, 0)) AS l2_power_sum,
+                       COUNT(phase_samples.l2_power_w) AS l2_power_count,
+                       SUM(COALESCE(phase_samples.l3_power_w, 0)) AS l3_power_sum,
+                       COUNT(phase_samples.l3_power_w) AS l3_power_count,
+                       SUM(
+                           CASE WHEN phase_samples.l1_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                 OR phase_samples.l2_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                 OR phase_samples.l3_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                THEN 1 ELSE 0 END
+                       ) AS suspect_sample_count,
+                       MAX(phase_samples.phase_power_spread_w) AS max_spread_w
+                FROM phase_samples
+                JOIN samples ON samples.id = phase_samples.sample_id
+                WHERE phase_samples.source_id = ?
+                  AND samples.ts_epoch >= ?
+                  AND samples.ts_epoch < ?
+                GROUP BY month_start
+                ORDER BY month_start
+                """,
+                (source_id, start_epoch, end_epoch),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def latest_phase_row_between(
         self,
         start_epoch: float,

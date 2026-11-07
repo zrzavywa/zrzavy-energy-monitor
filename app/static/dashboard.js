@@ -61,6 +61,38 @@ function isCurrentRequest(period, anchor) {
   return state.period === period && state.anchor === anchor;
 }
 
+// The day view follows the running day, the week and month views only need
+// occasional updates. A period in the past never refreshes.
+const REFRESH_INTERVALS = {day: 60000, week: 300000, month: 900000};
+let nextAutoRefreshAt = 0;
+
+function periodStartKey(period, isoDate) {
+  const date = new Date(isoDate + "T12:00:00");
+  if (period === "week") date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  if (period === "month") date.setDate(1);
+  if (period === "year") date.setMonth(0, 1);
+  return localISODate(date);
+}
+
+function isCurrentPeriod() {
+  return periodStartKey(state.period, state.anchor) === periodStartKey(state.period, localISODate());
+}
+
+function scheduleAutoRefresh() {
+  const interval = REFRESH_INTERVALS[state.period];
+  nextAutoRefreshAt = interval && isCurrentPeriod() ? Date.now() + interval : 0;
+}
+
+function checkAutoRefresh() {
+  if (!nextAutoRefreshAt || Date.now() < nextAutoRefreshAt) return;
+  if (!isCurrentPeriod()) {
+    nextAutoRefreshAt = 0;
+    return;
+  }
+  scheduleAutoRefresh();
+  loadDashboard();
+}
+
 const VALUE_COLUMNS = [
   {label: "Erzeugung", series: "solar_kwh", kpi: "solar_kwh"},
   {label: "Hausverbrauch", series: "house_kwh", kpi: "house_kwh"},
@@ -117,6 +149,7 @@ async function loadDashboard() {
     })
     .finally(stopLoading);
   const phaseRequest = loadPhaseDashboard().finally(stopLoading);
+  scheduleAutoRefresh();
   await Promise.all([dashboardRequest, phaseRequest]);
 }
 
@@ -352,15 +385,6 @@ function renderPhaseLive(latest) {
 async function loadPhaseDashboard() {
   const period = state.period;
   const anchor = state.anchor;
-  if (period === "year") {
-    state.phaseDashboard = null;
-    const summary = document.getElementById("phase-period-summary");
-    if (summary) {
-      summary.textContent = "Der Phasenverlauf wird für die Jahresansicht nicht geladen.";
-    }
-    drawPhaseChart();
-    return;
-  }
   try {
     const response = await fetch(`/api/phases/dashboard?period=${period}&anchor=${anchor}&source=house_meter`);
     if (!response.ok) throw new Error("Phasenverlauf konnte nicht geladen werden.");
@@ -368,8 +392,9 @@ async function loadPhaseDashboard() {
     if (!isCurrentRequest(period, anchor)) return;
     state.phaseDashboard = phaseDashboard;
     const summary = state.phaseDashboard.summary;
+    const meanHint = period === "year" ? " · Monatsmittel der Momentanleistung" : "";
     document.getElementById("phase-period-summary").textContent = summary.sample_count
-      ? `${summary.sample_count} Messungen · ${summary.suspect_sample_count} auffällig · maximale Spreizung ${formatNumber(summary.max_spread_w, 1)} W`
+      ? `${summary.sample_count} Messungen · ${summary.suspect_sample_count} auffällig · maximale Spreizung ${formatNumber(summary.max_spread_w, 1)} W${meanHint}`
       : "Noch keine Phasendaten.";
     drawPhaseChart();
   } catch (error) {
@@ -597,9 +622,7 @@ window.addEventListener("resize", () => {
 loadDashboard();
 loadLive();
 setInterval(loadLive, 5000);
-setInterval(() => {
-  if (state.period === "day") loadDashboard();
-}, 60000);
+setInterval(checkAutoRefresh, 30000);
 
 async function loadValidationSummary() {
   const status = document.getElementById("validation-status");
