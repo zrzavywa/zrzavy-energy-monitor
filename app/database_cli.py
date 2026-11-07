@@ -13,10 +13,12 @@ from zrzavy_energy_monitor_core.paths import DB_PATH
 from zrzavy_energy_monitor_core.persistence.maintenance import (
     DatabaseInspection,
     DatabaseMaintenanceError,
+    apply_retention,
     create_database_backup,
     dry_run_database_migration,
     inspect_database,
     migrate_database_with_backup,
+    plan_retention,
 )
 from zrzavy_energy_monitor_core.persistence.migrations import DatabaseSchemaError
 from zrzavy_energy_monitor_core.services.version import read_installed_version
@@ -63,6 +65,16 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Nach Pflicht-Backup auf das Zielschema migrieren",
     )
+    action.add_argument(
+        "--retention-dry-run",
+        action="store_true",
+        help="Nur zählen, wie viele Rohdatenzeilen eine Aufbewahrungsfrist löschen würde",
+    )
+    action.add_argument(
+        "--apply-retention",
+        action="store_true",
+        help="Rohdaten älter als die Aufbewahrungsfrist in einer Transaktion löschen",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -84,10 +96,33 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=read_installed_version(PROJECT_ROOT / "VERSION"),
         help="Anwendungsversion für den Migrationsnachweis",
     )
+    parser.add_argument(
+        "--keep-raw-days",
+        type=int,
+        default=730,
+        help="Tage Rohdaten, die bei der Aufbewahrung erhalten bleiben (Standard: 730)",
+    )
     args = parser.parse_args(argv)
-    if args.dry_run and not args.migrate_database:
-        parser.error("--dry-run ist nur mit --migrate-database zulässig")
+    if args.dry_run and not (args.migrate_database or args.apply_retention):
+        parser.error(
+            "--dry-run ist nur mit --migrate-database oder --apply-retention zulässig"
+        )
+    if args.dry_run and args.apply_retention:
+        args.retention_dry_run = True
+        args.apply_retention = False
     return args
+
+
+def _print_retention_plan(plan) -> None:
+    """Print how many rows a retention rule would delete."""
+    print(
+        f"Aufbewahrung: {plan.keep_raw_days} Tage Rohdaten; "
+        f"Grenze ts_epoch={plan.cutoff_epoch:.0f}"
+    )
+    print(f"Samples älter als die Grenze: {plan.sample_count}")
+    for name, count in sorted(plan.dependent_counts.items()):
+        print(f"  {name}: {count}")
+    print(f"Zeilen gesamt: {plan.total_row_count}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -123,6 +158,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(f"Backup: {backup.backup_path}")
             print(f"Backup-Integrität: {backup.integrity_check}")
+        elif args.retention_dry_run:
+            plan = plan_retention(args.database, args.keep_raw_days)
+            _print_retention_plan(plan)
+            print("Retention-Dry-Run: OK; keine Zeile gelöscht")
+        elif args.apply_retention:
+            plan = plan_retention(args.database, args.keep_raw_days)
+            _print_retention_plan(plan)
+            retention_result = apply_retention(args.database, plan)
+            print(
+                "Retention: OK; "
+                f"{retention_result.deleted_samples} Samples und "
+                f"{sum(retention_result.deleted_dependent_counts.values())} "
+                "abhängige Zeilen gelöscht"
+            )
+            print("Hinweis: Der Dateiplatz wird erst nach einem VACUUM frei.")
         elif args.dry_run:
             result = dry_run_database_migration(
                 args.database,

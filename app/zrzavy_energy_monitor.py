@@ -621,6 +621,7 @@ def api_update_status():
     return read_update_status_response(
         UPDATE_STATUS_PATH,
         read_update_status,
+        running_version=get_installed_version(),
     )
 
 @app.post("/api/update/download")

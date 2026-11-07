@@ -6,7 +6,17 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+Keine Änderungen.
+
+## [4.6.1] — 2026-11-07
+
 ### Hinzugefügt
+
+- Aufbewahrung für Rohdaten: `python app/database_cli.py
+  --retention-dry-run --keep-raw-days 730` zählt, `--apply-retention` löscht
+  alte Samples und alle abhängigen Zeilen in einer Transaktion. Der Dry Run
+  ist der Standardweg; der Dateiplatz wird erst durch ein anschließendes
+  `VACUUM` frei.
 
 - Phasenverlauf für die Jahresansicht: Die API aggregiert für `year` in SQL je
   lokalem Kalendermonat und liefert zwölf Monatsmittel der Momentanleistung
@@ -22,6 +32,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
   ebenso wenig. Automatische Aktualisierungen laufen ohne Ladeabblendung, die
   Panels bleiben also lesbar; neben dem Periodentitel steht der Zeitpunkt der
   letzten Aktualisierung.
+
+### Behoben
+
+- Die Update-Anzeige meldet die laufende Version statt der zuletzt vom
+  Updater geschriebenen. Wird ein Release auf anderem Weg installiert, blieb
+  `installed_version` in `update-status.json` veraltet (auf der
+  Referenzinstallation monatelang `4.5.3`). Der laufende Stand gewinnt jetzt,
+  der gespeicherte Wert bleibt als `status_installed_version` sichtbar.
 
 ### Betrieb
 

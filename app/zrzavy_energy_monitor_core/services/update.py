@@ -63,9 +63,25 @@ def build_update_check_response(
 def read_update_status_response(
     status_path: Path,
     status_reader: StatusReader,
+    running_version: str | None = None,
 ) -> dict[str, Any]:
-    """Read the existing persisted update status."""
-    return status_reader(status_path)
+    """Read the persisted update status and reconcile it with the running code.
+
+    The status file is written by the privileged updater. A release installed
+    any other way, or an update that predates the running code, leaves a
+    version in that file which no longer describes what is running. The
+    running version therefore wins, and the stored value stays visible as
+    status_installed_version so the difference remains traceable.
+    """
+    status = status_reader(status_path)
+    if running_version is None:
+        return status
+
+    stored_version = status.get("installed_version")
+    if stored_version != running_version:
+        status["status_installed_version"] = stored_version
+        status["installed_version"] = running_version
+    return status
 
 
 def perform_update_download(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import tempfile
+import time
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -415,4 +416,159 @@ def _table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
             (table_name,),
         ).fetchone()
         is not None
+    )
+
+
+@dataclass(frozen=True)
+class RetentionPlan:
+    """Describe the raw-data rows a retention cut-off would delete."""
+
+    database_path: Path
+    keep_raw_days: int
+    cutoff_epoch: float
+    sample_count: int
+    dependent_counts: dict[str, int]
+
+    @property
+    def dependent_row_count(self) -> int:
+        """Return the number of dependent rows in the plan."""
+        return sum(self.dependent_counts.values())
+
+    @property
+    def total_row_count(self) -> int:
+        """Return the total number of rows in the plan."""
+        return self.sample_count + self.dependent_row_count
+
+
+@dataclass(frozen=True)
+class RetentionResult:
+    """Report the rows a retention run actually deleted."""
+
+    plan: RetentionPlan
+    deleted_samples: int
+    deleted_dependent_counts: dict[str, int]
+
+
+def _sample_dependent_tables(connection: sqlite3.Connection) -> tuple[str, ...]:
+    """Return tables that reference samples through a sample_id column."""
+    names = [
+        row[0]
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' "
+            "AND name NOT LIKE 'sqlite_%' AND name != 'samples' ORDER BY name"
+        )
+    ]
+    dependent: list[str] = []
+    for name in names:
+        columns = {row[1] for row in connection.execute(f"PRAGMA table_info({name})")}
+        if "sample_id" in columns:
+            dependent.append(name)
+    return tuple(dependent)
+
+
+def _retention_cutoff(keep_raw_days: int, now_epoch: float | None) -> float:
+    """Return the epoch before which raw samples count as expired."""
+    if keep_raw_days < 1:
+        raise DatabaseMaintenanceError("keep_raw_days muss mindestens 1 sein.")
+    reference = time.time() if now_epoch is None else now_epoch
+    return reference - keep_raw_days * 86_400.0
+
+
+def plan_retention(
+    database_path: Path,
+    keep_raw_days: int,
+    *,
+    now_epoch: float | None = None,
+) -> RetentionPlan:
+    """Plan how many raw rows a retention rule would delete.
+
+    Args:
+        database_path: Existing SQLite database file.
+        keep_raw_days: Number of days of raw samples to keep.
+        now_epoch: Optional reference time for deterministic tests.
+
+    Returns:
+        Row counts per affected table. Nothing is deleted.
+
+    Raises:
+        DatabaseMaintenanceError: If the path is unusable or the input invalid.
+
+    Side Effects:
+        Opens the database read-only and runs one counting query per table.
+    """
+    path = _existing_database_path(database_path)
+    cutoff = _retention_cutoff(keep_raw_days, now_epoch)
+    with closing(sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True)) as connection:
+        sample_count = connection.execute(
+            "SELECT COUNT(*) FROM samples WHERE ts_epoch < ?", (cutoff,)
+        ).fetchone()[0]
+        dependent = {
+            name: connection.execute(
+                "SELECT COUNT(*) FROM "
+                f"{name} WHERE sample_id IN (SELECT id FROM samples WHERE ts_epoch < ?)",
+                (cutoff,),
+            ).fetchone()[0]
+            for name in _sample_dependent_tables(connection)
+        }
+    return RetentionPlan(
+        database_path=path,
+        keep_raw_days=keep_raw_days,
+        cutoff_epoch=cutoff,
+        sample_count=sample_count,
+        dependent_counts={name: count for name, count in dependent.items() if count},
+    )
+
+
+def apply_retention(
+    database_path: Path,
+    plan: RetentionPlan,
+) -> RetentionResult:
+    """Delete the rows described by a retention plan in one transaction.
+
+    Args:
+        database_path: Database file the plan was computed for.
+        plan: Result of plan_retention for the same file.
+
+    Returns:
+        Deleted row counts per table.
+
+    Raises:
+        DatabaseMaintenanceError: If the path differs from the plan target.
+
+    Side Effects:
+        Deletes raw samples older than the cut-off and their dependent rows,"
+        then commits. Foreign keys stay enabled, so a missed dependent table
+        aborts the transaction instead of leaving orphaned rows.
+    """
+    path = _existing_database_path(database_path)
+    if plan.database_path != path:
+        raise DatabaseMaintenanceError(
+            f"Der Plan gehört zu einer anderen Datenbank: {plan.database_path}"
+        )
+    if plan.sample_count == 0:
+        return RetentionResult(
+            plan=plan, deleted_samples=0, deleted_dependent_counts={}
+        )
+
+    deleted: dict[str, int] = {}
+    with closing(sqlite3.connect(path, timeout=60)) as connection:
+        connection.execute("PRAGMA foreign_keys=ON")
+        with connection:
+            for name in _sample_dependent_tables(connection):
+                cursor = connection.execute(
+                    "DELETE FROM "
+                    f"{name} WHERE sample_id IN ("
+                    "SELECT id FROM samples WHERE ts_epoch < ?)",
+                    (plan.cutoff_epoch,),
+                )
+                if cursor.rowcount > 0:
+                    deleted[name] = cursor.rowcount
+            cursor = connection.execute(
+                "DELETE FROM samples WHERE ts_epoch < ?", (plan.cutoff_epoch,)
+            )
+            deleted_samples = cursor.rowcount
+    return RetentionResult(
+        plan=plan,
+        deleted_samples=deleted_samples,
+        deleted_dependent_counts=deleted,
     )

@@ -207,6 +207,37 @@ Daraus folgt für Wartungsarbeiten:
   Aufbewahrungs- oder Aufräumschritt ist erst wirksam, wenn das `VACUUM`
   anschließend läuft.
 
+## Aufbewahrung und Aufräumen der Rohdaten
+
+Die Rohdatenbank wächst mit jedem Messintervall. Seit 4.6.1 gibt es dafür
+einen Befehl, der ausschließlich Datenbankarbeit leistet und weder Webserver
+noch Collector startet:
+
+```bash
+# Nur zählen, nichts löschen
+python app/database_cli.py --retention-dry-run --keep-raw-days 730
+
+# Löschen; läuft in einer Transaktion mit aktiven Fremdschlüsseln
+python app/database_cli.py --apply-retention --keep-raw-days 730
+```
+
+- `--keep-raw-days` legt fest, wie viele Tage Rohdaten erhalten bleiben
+  (Standard 730, also 24 Monate).
+- Gelöscht werden Samples vor der Grenze und alle abhängigen Zeilen in
+  `phase_samples`, `grid_meter_samples`, `validation_events`,
+  `energy_balance_samples`, `measurements` und `source_selection_events`.
+  Fehlt eine abhängige Tabelle im Schema, bricht die Transaktion ab, statt
+  Waisen zurückzulassen.
+- Der Dateiplatz wird erst durch ein anschließendes `VACUUM` frei; vorher
+  bleibt die Datei gleich groß.
+- Vorher eine geprüfte Sicherung erstellen (`--backup-database`) und das
+  Ergebnis des Dry Run notieren.
+
+Restobjekte aus einer Reparatur (`lost_and_found`) gehören nicht zum
+Anwendungsbestand. Sie lassen sich im Wartungsfenster mit `DROP TABLE
+lost_and_found` entfernen; wirksam wird der gewonnene Platz ebenfalls erst
+nach dem `VACUUM`.
+
 ## Regelmäßige Betriebsprüfung
 
 Empfohlen mindestens monatlich:
