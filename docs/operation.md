@@ -190,7 +190,10 @@ Laufzeit exklusiven Zugriff: Der Dienst muss stehen. Auf der Referenzinstallatio
 liegt die Datenbank mit rund 6 GB auf einem USB-Datenträger mit etwa 4–10 MB/s
 Schreibrate. Dort dauerte allein das Kopieren der Datei rund zehn Minuten, und
 eine vollständige `PRAGMA quick_check`-Prüfung der Sicherung war nach 25 Minuten
-noch nicht abgeschlossen.
+noch nicht abgeschlossen. Ein zweiter Versuch am 2026-11-07 brauchte für
+dieselbe Prüfung über 48 Minuten; der Prozess verbrauchte in dieser Zeit nur
+1:10 min CPU-Zeit, also praktisch nur I/O-Wartezeit. Rechne für eine
+6-GB-Datenbank mit 60 bis 90 Minuten pro vollständigem Prüflauf.
 
 Daraus folgt für Wartungsarbeiten:
 
@@ -237,6 +240,24 @@ Restobjekte aus einer Reparatur (`lost_and_found`) gehören nicht zum
 Anwendungsbestand. Sie lassen sich im Wartungsfenster mit `DROP TABLE
 lost_and_found` entfernen; wirksam wird der gewonnene Platz ebenfalls erst
 nach dem `VACUUM`.
+
+## Abgebrochener Wartungsversuch am 2026-11-07
+
+Fenster 16:13–17:01 UTC: Dienst gestoppt, `quick_check` der 6,3-GB-Sicherung
+gestartet. Nach 48 Minuten war die Prüfung noch nicht fertig; währenddessen
+startete der Host neu. Der Dienst kam beim Booten automatisch wieder hoch.
+
+- Ursache des Neustarts: unbekannt. Kein OOM, kein Undervoltage-Flag nach dem
+  Boot, keine Abschaltmeldung im Journal des vorherigen Boots. Auffällig ist
+  nur die Korrelation mit dauerhafter, schwerer Datenträgerlast.
+- Ergebnis: Datenbank unverändert. `lost_and_found` (120 565 Zeilen) ist
+  weiterhin vorhanden, es wurde keine Zeile gelöscht und kein `VACUUM`
+  gestartet.
+- Messlücke: 17:13:19 bis 18:01:38 lokal, also 48,3 Minuten.
+- Konsequenz: Aufräumen ohne Platzdruck ist den Ausfall nicht wert; 42 GB sind
+  frei. Ein `VACUUM` würde ein Mehrfaches der Prüfzeit brauchen. Wenn der Platz
+  gebraucht wird, zuerst Netzteil und Datenträger stabilisieren und ein
+  Fenster von mehreren Stunden einplanen.
 
 ## Regelmäßige Betriebsprüfung
 

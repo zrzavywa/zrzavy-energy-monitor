@@ -62,6 +62,11 @@ Keine Änderungen.
 
 ### Betrieb
 
+- Aufräumfenster am 2026-11-07 abgebrochen: Die `quick_check`-Prüfung der
+  6,3-GB-Sicherung war nach 48 Minuten nicht fertig, währenddessen startete
+  der Host neu. Datenbank unverändert, `lost_and_found` weiterhin vorhanden,
+  kein `VACUUM` gelaufen, Messlücke 48,3 Minuten. Ursache des Neustarts
+  unbekannt, dokumentiert in `docs/operation.md`.
 - Der Release-Build (`scripts/build-release.sh`) nutzt `rsync`, wenn es
   vorhanden ist, und fällt sonst auf `tar` mit derselben Ausschlussliste
   zurück. Auf dem Build-Host fehlte `rsync`.
