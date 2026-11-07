@@ -10,6 +10,16 @@ Keine Änderungen.
 
 ## [4.6.4] — 2026-11-07
 
+### Betrieb
+
+- Referenzinstallation am 2026-11-07 auf 4.6.4 gehoben (`releases/4.6.4`,
+  `.venv` aus 4.6.3 übernommen). Healthcheck `status=ok`, `version=4.6.4`,
+  `database=ok`; Tag 0,06 s, Woche 0,32 s, Monat 0,36 s.
+- Beim ersten Versuch mit 4.6.1 fehlte die `.venv` im Release-Verzeichnis, der
+  Dienst startete nicht (`203/EXEC`); Rollback auf 4.6.0 per Symlink, danach
+  `.venv` übernommen. Der Schritt steht jetzt in `docs/operation.md` unter
+  „Release einspielen“.
+
 ### Geändert
 
 - Tag, Woche und Monat aktualisieren sich im 60-Sekunden-Takt statt alle 15 s.

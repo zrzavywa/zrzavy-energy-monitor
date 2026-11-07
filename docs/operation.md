@@ -235,6 +235,10 @@ python app/database_cli.py --apply-retention --keep-raw-days 730
   bleibt die Datei gleich groß.
 - Vorher eine geprüfte Sicherung erstellen (`--backup-database`) und das
   Ergebnis des Dry Run notieren.
+- **Bewusst kein Automatiklauf.** Am 2026-11-07 wurde entschieden, die
+  Aufbewahrung nur von Hand im Wartungsfenster auszuführen; es gibt keinen
+  Zeitplan und keinen Hintergrunddienst dafür. Wer das ändern will, braucht
+  eine eigene Freigabe.
 
 Restobjekte aus einer Reparatur (`lost_and_found`) gehören nicht zum
 Anwendungsbestand. Sie lassen sich im Wartungsfenster mit `DROP TABLE
@@ -259,6 +263,22 @@ startete der Host neu. Der Dienst kam beim Booten automatisch wieder hoch.
   gebraucht wird, zuerst Netzteil und Datenträger stabilisieren und ein
   Fenster von mehreren Stunden einplanen.
 
+## Release einspielen
+
+1. Archiv prüfen: `sha256sum -c zrzavy-energy-monitor-<version>.tar.gz.sha256`.
+2. Dienst stoppen.
+3. Archiv nach `/opt/zrzavy-energy-monitor/releases/<version>/` entpacken.
+4. **`.venv` aus dem laufenden Release übernehmen:**
+   `cp -a /opt/zrzavy-energy-monitor/releases/<alt>/.venv releases/<version>/.venv`.
+   Das Archiv enthält keine virtuelle Umgebung; ohne diesen Schritt startet
+   der Dienst nicht (`status=203/EXEC`). Am 2026-11-07 ist genau das passiert.
+5. `current`-Symlink umschalten, Dienst starten
+6. Healthcheck prüfen: `status`, `version` und `database` müssen stimmen und die
+   Version muss der neuen entsprechen.
+
+Bei Fehlschlag genügt es, den Symlink auf das vorherige Release zurückzusetzen
+und den Dienst neu zu starten; die Datenbank bleibt unberührt.
+
 ## Regelmäßige Betriebsprüfung
 
 Empfohlen mindestens monatlich:
@@ -275,4 +295,5 @@ Empfohlen mindestens monatlich:
 
 ## Dokument-Change-Log
 
+- 2026-11-07 — Abschnitte „Aufbewahrung und Aufräumen der Rohdaten“, „Abgebrochener Wartungsversuch am 2026-11-07“ und „Release einspielen“ ergänzt; Anlass/Quelle: Retention-Befehl ab 4.6.1, abgebrochenes Aufräumfenster und fehlende `.venv` beim Deployment von 4.6.1; Prüfstatus: Befehle auf der Referenzinstallation ausgeführt (Dry Run), Deployment-Schritte am 2026-11-07 zweimal durchlaufen.
 - 2026-11-07 — Abschnitt „Wartungsfenster für die Datenbank" mit gemessenen Wartezeiten und Abbruchregeln ergänzt; Anlass/Quelle: Wartungsversuch auf der Referenzinstallation (6 GB, USB, `quick_check` > 25 min); Prüfstatus: Messwerte aus dem Betriebsprotokoll, Vorgehen angewandt und dokumentiert.
