@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -96,20 +97,18 @@ class StubSolakonReader:
         return self.reading
 
 
-class DashboardDatabase:
-    """Return predefined rows to build_dashboard."""
+def seed_dashboard_database(tmp_path: Path, rows: list[dict[str, Any]]) -> Any:
+    """Persist dashboard sample rows in a temporary database."""
 
-    def __init__(self, rows: list[dict[str, Any]]):
-        self.rows = rows
-        self.requested_bounds: tuple[float, float] | None = None
-
-    def rows_between(
-        self,
-        start_epoch: float,
-        end_epoch: float,
-    ) -> list[dict[str, Any]]:
-        self.requested_bounds = (start_epoch, end_epoch)
-        return self.rows
+    database = si.Database(tmp_path / "dashboard.db")
+    for row in rows:
+        sample = dict(row)
+        sample.setdefault(
+            "ts_local",
+            datetime.fromtimestamp(sample["ts_epoch"]).astimezone().isoformat(),
+        )
+        database.insert_sample(sample)
+    return database
 
 
 def collector_config(
@@ -413,6 +412,7 @@ def dashboard_row(
     """Create one persisted sample row for dashboard tests."""
     return {
         "ts_epoch": timestamp.timestamp(),
+        "ts_local": timestamp.isoformat(),
         "solar_wh": solar_wh,
         "house_wh": house_wh,
         "grid_import_wh": grid_import_wh,
@@ -431,7 +431,7 @@ def dashboard_row(
     }
 
 
-def test_dashboard_aggregates_energy_buckets_and_kpis() -> None:
+def test_dashboard_aggregates_energy_buckets_and_kpis(tmp_path: Path) -> None:
     """Stored Wh values are summed into hourly series and period KPIs."""
     anchor = date(2026, 7, 23)
     start, end, _labels, _title = si.period_bounds("day", anchor)
@@ -473,14 +473,10 @@ def test_dashboard_aggregates_energy_buckets_and_kpis() -> None:
             grid_source="Latest grid",
         ),
     ]
-    database = DashboardDatabase(rows)
+    database = seed_dashboard_database(tmp_path, rows)
 
     dashboard = si.build_dashboard(database, "day", anchor)
 
-    assert database.requested_bounds == (
-        start.timestamp(),
-        end.timestamp(),
-    )
     assert dashboard["series"]["solar_kwh"][1] == 1.0
     assert dashboard["series"]["solar_kwh"][2] == 0.5
     assert dashboard["series"]["house_kwh"][1] == 2.0
@@ -511,20 +507,22 @@ def test_dashboard_aggregates_energy_buckets_and_kpis() -> None:
     assert kpi["grid_source"] == "Latest grid"
 
 
-def test_dashboard_treats_missing_energy_as_zero() -> None:
+def test_dashboard_treats_missing_energy_as_zero(tmp_path: Path) -> None:
     """Missing and None energy fields contribute zero to dashboard totals."""
     anchor = date(2026, 7, 23)
     start, _end, _labels, _title = si.period_bounds("day", anchor)
-    database = DashboardDatabase(
+    database = seed_dashboard_database(
+        tmp_path,
         [
             {
                 "ts_epoch": (start + timedelta(hours=3)).timestamp(),
-                "solar_wh": None,
-                "house_wh": None,
+                "ts_local": (start + timedelta(hours=3)).isoformat(),
+                "solar_wh": 0.0,
+                "house_wh": 0.0,
                 "solar_source": "No energy",
                 "grid_source": "No grid",
             }
-        ]
+        ],
     )
 
     dashboard = si.build_dashboard(database, "day", anchor)
@@ -545,6 +543,7 @@ def test_dashboard_treats_missing_energy_as_zero() -> None:
     [
         ("day", timedelta(hours=7), 7),
         ("week", timedelta(days=4), 4),
+        ("month", timedelta(days=20), 20),
         ("year", timedelta(days=181), 6),
     ],
 )

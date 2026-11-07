@@ -41,6 +41,65 @@ class PhaseDatabaseStub:
         self.range_request = (start_epoch, end_epoch, source_id)
         return [dict(row) for row in self.rows]
 
+    def aggregate_phase_by_hour(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        self.range_request = (start_epoch, end_epoch, source_id)
+        buckets: dict[int, dict[str, Any]] = {}
+        for row in self.rows:
+            hour_start = int(float(row["ts_epoch"]) // 3600)
+            bucket = buckets.get(hour_start)
+            if bucket is None:
+                bucket = {
+                    "hour_start": hour_start,
+                    "sample_count": 0,
+                    "suspect_sample_count": 0,
+                    "max_spread_w": None,
+                }
+                for phase in ("l1", "l2", "l3"):
+                    bucket[f"{phase}_power_sum"] = 0.0
+                    bucket[f"{phase}_power_count"] = 0
+                buckets[hour_start] = bucket
+            bucket["sample_count"] += 1
+            if any(
+                row.get(f"{phase}_quality")
+                in {"suspect", "rejected", "stale", "unavailable"}
+                for phase in ("l1", "l2", "l3")
+            ):
+                bucket["suspect_sample_count"] += 1
+            spread = row.get("phase_power_spread_w")
+            if spread is not None:
+                current = bucket["max_spread_w"]
+                bucket["max_spread_w"] = (
+                    float(spread)
+                    if current is None
+                    else max(float(current), float(spread))
+                )
+            for phase in ("l1", "l2", "l3"):
+                value = row.get(f"{phase}_power_w")
+                if value is None:
+                    continue
+                bucket[f"{phase}_power_sum"] += float(value)
+                bucket[f"{phase}_power_count"] += 1
+        return [buckets[key] for key in sorted(buckets)]
+
+    def latest_phase_row_between(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> dict[str, Any] | None:
+        self.range_request = (start_epoch, end_epoch, source_id)
+        if not self.rows:
+            return None
+        newest = max(self.rows, key=lambda row: float(row["ts_epoch"]))
+        return dict(newest)
+
 
 def _timestamp(hour: int) -> float:
     timezone = datetime.now().astimezone().tzinfo

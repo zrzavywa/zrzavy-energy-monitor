@@ -29,6 +29,10 @@ function shiftAnchor(direction) {
   const date = new Date(state.anchor + "T12:00:00");
   if (state.period === "day") date.setDate(date.getDate() + direction);
   if (state.period === "week") date.setDate(date.getDate() + 7 * direction);
+  if (state.period === "month") {
+    date.setDate(1);
+    date.setMonth(date.getMonth() + direction);
+  }
   if (state.period === "year") date.setFullYear(date.getFullYear() + direction);
   state.anchor = localISODate(date);
   anchorInput.value = state.anchor;
@@ -51,11 +55,76 @@ document.getElementById("today-period").addEventListener("click", () => {
   loadDashboard();
 });
 
+let pendingLoads = 0;
+
+function isCurrentRequest(period, anchor) {
+  return state.period === period && state.anchor === anchor;
+}
+
+const VALUE_COLUMNS = [
+  {label: "Erzeugung", series: "solar_kwh", kpi: "solar_kwh"},
+  {label: "Hausverbrauch", series: "house_kwh", kpi: "house_kwh"},
+  {label: "Netzbezug", series: "grid_import_kwh", kpi: "grid_import_kwh"},
+  {label: "Einspeisung", series: "feed_in_kwh", kpi: "feed_in_kwh"},
+  {label: "Eigenverbrauch", series: "self_consumption_kwh", kpi: "self_consumption_kwh"}
+];
+
+function renderValueTable() {
+  const body = document.getElementById("values-body");
+  const foot = document.getElementById("values-foot");
+  const title = document.getElementById("values-title");
+  const data = state.dashboard;
+  if (!body || !foot || !data) return;
+  if (title) title.textContent = `Werte · ${data.title}`;
+  body.innerHTML = data.labels.map((label, index) => {
+    const cells = VALUE_COLUMNS.map(column => {
+      const value = data.series[column.series][index];
+      return `<td>${formatNumber(value, 3)}</td>`;
+    }).join("");
+    return `<tr><th scope="row">${escapeHTML(label)}</th>${cells}</tr>`;
+  }).join("");
+  foot.innerHTML = `<tr><th scope="row">Summe</th>${VALUE_COLUMNS.map(column => `<td>${formatNumber(data.kpi[column.kpi], 3)}</td>`).join("")}</tr>`;
+}
+
+function startLoading() {
+  pendingLoads += 1;
+  document.body.classList.add("is-loading");
+}
+
+function stopLoading() {
+  pendingLoads = Math.max(0, pendingLoads - 1);
+  if (pendingLoads === 0) document.body.classList.remove("is-loading");
+}
+
 async function loadDashboard() {
-  const response = await fetch(`/api/dashboard?period=${state.period}&anchor=${state.anchor}`);
-  state.dashboard = await response.json();
-  document.getElementById("period-title").textContent = state.dashboard.title;
-  const k = state.dashboard.kpi;
+  const period = state.period;
+  const anchor = state.anchor;
+  startLoading();
+  const dashboardRequest = fetch(`/api/dashboard?period=${period}&anchor=${anchor}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Dashboard konnte nicht geladen werden.");
+      return response.json();
+    })
+    .then(data => {
+      if (!isCurrentRequest(period, anchor)) return;
+      state.dashboard = data;
+      renderDashboard();
+    })
+    .catch(() => {
+      if (!isCurrentRequest(period, anchor)) return;
+      const empty = document.getElementById("chart-empty");
+      if (empty) empty.style.display = "grid";
+    })
+    .finally(stopLoading);
+  const phaseRequest = loadPhaseDashboard().finally(stopLoading);
+  await Promise.all([dashboardRequest, phaseRequest]);
+}
+
+function renderDashboard() {
+  const data = state.dashboard;
+  if (!data) return;
+  document.getElementById("period-title").textContent = data.title;
+  const k = data.kpi;
   document.getElementById("kpi-solar").textContent = kwh(k.solar_kwh);
   document.getElementById("kpi-house").textContent = kwh(k.house_kwh);
   document.getElementById("kpi-import").textContent = kwh(k.grid_import_kwh);
@@ -76,7 +145,7 @@ async function loadDashboard() {
   document.getElementById("period-source").textContent = k.solar_source || "Keine Quelle";
   document.getElementById("kpi-grid-source").textContent = k.grid_source || "–";
   drawChart();
-  await loadPhaseDashboard();
+  renderValueTable();
 }
 
 function setText(id, value, digits = 0) {
@@ -281,10 +350,23 @@ function renderPhaseLive(latest) {
 }
 
 async function loadPhaseDashboard() {
+  const period = state.period;
+  const anchor = state.anchor;
+  if (period === "year") {
+    state.phaseDashboard = null;
+    const summary = document.getElementById("phase-period-summary");
+    if (summary) {
+      summary.textContent = "Der Phasenverlauf wird für die Jahresansicht nicht geladen.";
+    }
+    drawPhaseChart();
+    return;
+  }
   try {
-    const response = await fetch(`/api/phases/dashboard?period=${state.period}&anchor=${state.anchor}&source=house_meter`);
+    const response = await fetch(`/api/phases/dashboard?period=${period}&anchor=${anchor}&source=house_meter`);
     if (!response.ok) throw new Error("Phasenverlauf konnte nicht geladen werden.");
-    state.phaseDashboard = await response.json();
+    const phaseDashboard = await response.json();
+    if (!isCurrentRequest(period, anchor)) return;
+    state.phaseDashboard = phaseDashboard;
     const summary = state.phaseDashboard.summary;
     document.getElementById("phase-period-summary").textContent = summary.sample_count
       ? `${summary.sample_count} Messungen · ${summary.suspect_sample_count} auffällig · maximale Spreizung ${formatNumber(summary.max_spread_w, 1)} W`
@@ -515,7 +597,9 @@ window.addEventListener("resize", () => {
 loadDashboard();
 loadLive();
 setInterval(loadLive, 5000);
-setInterval(loadDashboard, 60000);
+setInterval(() => {
+  if (state.period === "day") loadDashboard();
+}, 60000);
 
 async function loadValidationSummary() {
   const status = document.getElementById("validation-status");

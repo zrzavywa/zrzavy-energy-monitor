@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi%20OS-lightgrey)](docs/installation-raspberry-pi.md)
 
-**Zrzavy Energy Monitor** ist eine lokal betriebene Open-Source-Webanwendung für Home Energy Monitoring und Validierung. Sie kombiniert Messwerte der **Solakon ONE** mit unabhängigen **Shelly-Leistungsmessungen**, speichert Zeitreihen in SQLite und stellt Livewerte sowie Tages-, Wochen- und Jahresauswertungen im Browser bereit.
+**Zrzavy Energy Monitor** ist eine lokal betriebene Open-Source-Webanwendung für Home Energy Monitoring und Validierung. Sie kombiniert Messwerte der **Solakon ONE** mit unabhängigen **Shelly-Leistungsmessungen**, speichert Zeitreihen in SQLite und stellt Livewerte sowie Tages-, Wochen-, Monats- und Jahresauswertungen im Browser bereit.
 
 > Open-source home energy monitoring and validation
 
@@ -148,3 +148,7 @@ Weitere Informationen enthält die Datei [TRADEMARKS.md](TRADEMARKS.md).
 ## Lizenz
 
 Die geltende Lizenz ergibt sich aus der Datei `LICENSE` im Repository.
+
+## Dokument-Change-Log
+
+- 2026-11-07 — Funktionsumfang um Monatsauswertung ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl im Dashboard; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.

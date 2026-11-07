@@ -545,6 +545,69 @@ class Database:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def aggregate_samples_by_hour(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+    ) -> list[dict[str, Any]]:
+        """Aggregate stored energy samples per UTC hour.
+
+        Returns one row per hour with summed Wh columns plus SoC and deviation
+        accumulators, so callers can fold hours into local buckets without
+        transferring every sample to Python.
+        """
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT CAST(ts_epoch / 3600 AS INTEGER) AS hour_start,
+                       COUNT(*) AS sample_count,
+                       SUM(COALESCE(solar_wh, 0)) AS solar_wh,
+                       SUM(COALESCE(house_wh, 0)) AS house_wh,
+                       SUM(COALESCE(grid_import_wh, 0)) AS grid_import_wh,
+                       SUM(COALESCE(feed_in_wh, 0)) AS feed_in_wh,
+                       SUM(COALESCE(self_consumption_wh, 0)) AS self_consumption_wh,
+                       SUM(COALESCE(shelly_solar_wh, 0)) AS shelly_solar_wh,
+                       SUM(COALESCE(solakon_pv_wh, 0)) AS solakon_pv_wh,
+                       SUM(COALESCE(solakon_ac_wh, 0)) AS solakon_ac_wh,
+                       SUM(COALESCE(battery_charge_wh, 0)) AS battery_charge_wh,
+                       SUM(COALESCE(battery_discharge_wh, 0)) AS battery_discharge_wh,
+                       SUM(COALESCE(solakon_battery_soc_pct, 0)) AS soc_sum,
+                       COUNT(solakon_battery_soc_pct) AS soc_count,
+                       MIN(solakon_battery_soc_pct) AS soc_min,
+                       MAX(solakon_battery_soc_pct) AS soc_max,
+                       SUM(COALESCE(solar_difference_w, 0)) AS difference_sum,
+                       COUNT(solar_difference_w) AS difference_count,
+                       SUM(COALESCE(solar_difference_pct, 0)) AS difference_pct_sum,
+                       COUNT(solar_difference_pct) AS difference_pct_count
+                FROM samples
+                WHERE ts_epoch >= ? AND ts_epoch < ?
+                GROUP BY hour_start
+                ORDER BY hour_start
+                """,
+                (start_epoch, end_epoch),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def latest_sample_sources(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+    ) -> Optional[dict[str, Any]]:
+        """Return the source labels of the newest sample inside a range."""
+
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT solar_source, grid_source FROM samples
+                WHERE ts_epoch >= ? AND ts_epoch < ?
+                ORDER BY ts_epoch DESC
+                LIMIT 1
+                """,
+                (start_epoch, end_epoch),
+            ).fetchone()
+        return dict(row) if row is not None else None
+
     def latest_grid_meter_sample(
         self,
         source_id: str = "grid_meter_primary",
@@ -630,6 +693,78 @@ class Database:
                 (source_id, start_epoch, end_epoch),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def aggregate_phase_by_hour(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> list[dict[str, Any]]:
+        """Average persisted phase power per UTC hour.
+
+        Returns summed power and reading counts per phase, the number of hours
+        containing questionable phase qualities, and the largest spread, so the
+        HTTP layer can fold hours into period buckets without row transfers.
+        """
+
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT CAST(samples.ts_epoch / 3600 AS INTEGER) AS hour_start,
+                       COUNT(*) AS sample_count,
+                       SUM(COALESCE(phase_samples.l1_power_w, 0)) AS l1_power_sum,
+                       COUNT(phase_samples.l1_power_w) AS l1_power_count,
+                       SUM(COALESCE(phase_samples.l2_power_w, 0)) AS l2_power_sum,
+                       COUNT(phase_samples.l2_power_w) AS l2_power_count,
+                       SUM(COALESCE(phase_samples.l3_power_w, 0)) AS l3_power_sum,
+                       COUNT(phase_samples.l3_power_w) AS l3_power_count,
+                       SUM(
+                           CASE WHEN phase_samples.l1_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                 OR phase_samples.l2_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                 OR phase_samples.l3_quality IN
+                                     ('suspect', 'rejected', 'stale', 'unavailable')
+                                THEN 1 ELSE 0 END
+                       ) AS suspect_sample_count,
+                       MAX(phase_samples.phase_power_spread_w) AS max_spread_w
+                FROM phase_samples
+                JOIN samples ON samples.id = phase_samples.sample_id
+                WHERE phase_samples.source_id = ?
+                  AND samples.ts_epoch >= ?
+                  AND samples.ts_epoch < ?
+                GROUP BY hour_start
+                ORDER BY hour_start
+                """,
+                (source_id, start_epoch, end_epoch),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def latest_phase_row_between(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_id: str = "house_meter",
+    ) -> Optional[dict[str, Any]]:
+        """Return the newest persisted phase row inside a range."""
+
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT phase_samples.*, samples.ts_epoch, samples.ts_local
+                FROM phase_samples
+                JOIN samples ON samples.id = phase_samples.sample_id
+                WHERE phase_samples.source_id = ?
+                  AND samples.ts_epoch >= ?
+                  AND samples.ts_epoch < ?
+                ORDER BY samples.ts_epoch DESC
+                LIMIT 1
+                """,
+                (source_id, start_epoch, end_epoch),
+            ).fetchone()
+        return dict(row) if row is not None else None
 
     def stats(self) -> dict[str, Any]:
         """stats provides the public operation implemented by this component."""

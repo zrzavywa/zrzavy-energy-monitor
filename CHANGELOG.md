@@ -6,12 +6,27 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- Dashboard: Zeitraumauswahl `Monat` mit einem Bucket je Kalendertag sowie
+  eine Wertetabelle unter dem Diagramm, die Erzeugung, Hausverbrauch,
+  Netzbezug, Einspeisung und Eigenverbrauch je Bucket und als Summe in kWh
+  ausgibt. Damit sind die Zahlen ohne Ablesen des Diagramms verfügbar.
+
 ### Geändert
 
 - Der reguläre Start einer bereits aktuellen Datenbank führt kein vollständiges
   PRAGMA integrity_check und keine Zeilenzählungen aus. Schema- und
   Versionsprüfung bleiben aktiv; Migrations- und explizite Wartungspfade
   behalten ihre vollständigen Integritäts- und Bestandsprüfungen.
+- Dashboard-Aggregation läuft in SQLite: Die Historie wird je Stunde
+  zusammengefasst und erst danach auf Tages-, Wochen-, Monats- oder
+  Jahresbuckets verteilt, statt alle Rohzeilen zu laden. Auf dem
+  Referenz-Raspberry-Pi sinkt die Jahresansicht dadurch von rund 148 auf
+  wenige Sekunden; die Phasenauswertung nutzt denselben Pfad.
+- Die Web-Oberfläche lädt Energie- und Phasenansicht parallel, aktualisiert
+  den gewählten Zeitraum nicht mehr minütlich in der Jahresansicht und fragt
+  den Phasenverlauf für die Jahresansicht nicht mehr ab.
 
 ## [4.5.5] - 2026-07-29
 
@@ -246,3 +261,4 @@ Hardwarevalidierung ist nicht Bestandteil dieses Releasevorbereitungslaufs.
 ## Dokument-Change-Log
 
 - 2026-11-07 — Unreleased-Eintrag zum Datenbankstart-Inspektionspfad ergänzt; Anlass/Quelle: verifizierter Produktions-Codevergleich mit GitHub; Prüfstatus: Implementierung, Tests und Dokumentation abgeglichen.
+- 2026-11-07 — Unreleased-Einträge zu Monatsansicht, Wertetabelle und SQL-Aggregation ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Analyse der Dashboard-Latenzen; Prüfstatus: Implementierung und Tests abgeglichen, `./scripts/verify.sh` PASS, Produktionsmessung der neuen Latenz ausstehend.

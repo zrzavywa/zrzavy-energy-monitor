@@ -35,6 +35,20 @@ def period_bounds(
         "Samstag",
         "Sonntag",
     ]
+    month_names = [
+        "Januar",
+        "Februar",
+        "März",
+        "April",
+        "Mai",
+        "Juni",
+        "Juli",
+        "August",
+        "September",
+        "Oktober",
+        "November",
+        "Dezember",
+    ]
     if period == "week":
         start_date = anchor - timedelta(days=anchor.weekday())
         start = datetime.combine(start_date, datetime.min.time(), tzinfo=tz)
@@ -44,6 +58,19 @@ def period_bounds(
             for i in range(7)
         ]
         title = f"Woche {start_date.isocalendar().week} · {start_date:%d.%m.}–{(start_date + timedelta(days=6)):%d.%m.%Y}"
+    elif period == "month":
+        month_start = date(anchor.year, anchor.month, 1)
+        if anchor.month == 12:
+            next_month = date(anchor.year + 1, 1, 1)
+        else:
+            next_month = date(anchor.year, anchor.month + 1, 1)
+        start = datetime.combine(month_start, datetime.min.time(), tzinfo=tz)
+        end = datetime.combine(next_month, datetime.min.time(), tzinfo=tz)
+        labels = [
+            f"{(month_start + timedelta(days=offset)):%d.%m.}"
+            for offset in range((next_month - month_start).days)
+        ]
+        title = f"{month_names[anchor.month - 1]} {anchor.year}"
     elif period == "year":
         start = datetime(anchor.year, 1, 1, tzinfo=tz)
         end = datetime(anchor.year + 1, 1, 1, tzinfo=tz)
@@ -74,6 +101,8 @@ def period_bounds(
 def bucket_index(period: str, start: datetime, sample_dt: datetime) -> int:
     """bucket_index provides the public operation implemented by this component."""
     if period == "week":
+        return (sample_dt.date() - start.date()).days
+    if period == "month":
         return (sample_dt.date() - start.date()).days
     if period == "year":
         return sample_dt.month - 1
