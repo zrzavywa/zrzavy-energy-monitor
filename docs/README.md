@@ -1,6 +1,6 @@
 # Zrzavy-Energy-Monitor-Dokumentation
 
-Diese Dokumentation beschreibt Installation, Konfiguration und Betrieb von Zrzavy Energy Monitor. Sie orientiert sich am Produktstand **4.6.1**.
+Diese Dokumentation beschreibt Installation, Konfiguration und Betrieb von Zrzavy Energy Monitor. Sie orientiert sich am Produktstand **4.6.2**.
 
 > Open-source home energy monitoring and validation
 
@@ -28,7 +28,7 @@ Diese Dokumentation beschreibt Installation, Konfiguration und Betrieb von Zrzav
 - [Änderungshistorie](../CHANGELOG.md)
 - [Release Notes 4.5.2](release-notes-4.5.2.md)
 - [Release Notes 4.5.4](release-notes-4.5.4.md)
-- [Release Notes 4.6.1](release-notes-4.6.1.md)
+- [Release Notes 4.6.2](release-notes-4.6.2.md)
 - [Release Notes 4.6.0](release-notes-4.6.0.md)
 - [Release Notes 4.5.5](release-notes-4.5.5.md)
 - [Markenhinweise](../TRADEMARKS.md)

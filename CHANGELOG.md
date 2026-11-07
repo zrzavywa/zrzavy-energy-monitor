@@ -8,6 +8,15 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.6.2] — 2026-11-07
+
+### Behoben
+
+- `--retention-dry-run` und `--apply-retention` laufen nicht mehr durch die
+  allgemeine Schema- und Integritätsprüfung. Auf einer 6-GB-Datenbank hätte
+  der Dry Run sonst eine vollständige `integrity_check` ausgelöst und
+  minutenlang nichts ausgegeben; er braucht jetzt nur die Zählabfragen.
+
 ## [4.6.1] — 2026-11-07
 
 ### Hinzugefügt

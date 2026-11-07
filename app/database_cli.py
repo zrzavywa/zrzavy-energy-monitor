@@ -113,6 +113,34 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return args
 
 
+def _run_retention(args: argparse.Namespace) -> int:
+    """Plan or apply raw-data retention without touching the schema plan."""
+    try:
+        plan = plan_retention(args.database, args.keep_raw_days)
+        _print_retention_plan(plan)
+        if args.retention_dry_run:
+            print("Retention-Dry-Run: OK; keine Zeile gelöscht")
+            return EXIT_SUCCESS
+        result = apply_retention(args.database, plan)
+        print(
+            "Retention: OK; "
+            f"{result.deleted_samples} Samples und "
+            f"{sum(result.deleted_dependent_counts.values())} abhängige Zeilen "
+            "gelöscht"
+        )
+        print("Hinweis: Der Dateiplatz wird erst nach einem VACUUM frei.")
+        return EXIT_SUCCESS
+    except (
+        DatabaseMaintenanceError,
+        DatabaseSchemaError,
+        sqlite3.DatabaseError,
+        OSError,
+        ValueError,
+    ) as exc:
+        print(f"Fehler: {exc}", file=sys.stderr)
+        return EXIT_OPERATION_FAILED
+
+
 def _print_retention_plan(plan) -> None:
     """Print how many rows a retention rule would delete."""
     print(
@@ -143,6 +171,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = parse_args(argv)
     backup_directory = args.backup_directory or args.database.parent / "backups"
+    if args.retention_dry_run or args.apply_retention:
+        return _run_retention(args)
     try:
         inspection = inspect_database(args.database)
         _print_plan(inspection)
@@ -158,21 +188,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             print(f"Backup: {backup.backup_path}")
             print(f"Backup-Integrität: {backup.integrity_check}")
-        elif args.retention_dry_run:
-            plan = plan_retention(args.database, args.keep_raw_days)
-            _print_retention_plan(plan)
-            print("Retention-Dry-Run: OK; keine Zeile gelöscht")
-        elif args.apply_retention:
-            plan = plan_retention(args.database, args.keep_raw_days)
-            _print_retention_plan(plan)
-            retention_result = apply_retention(args.database, plan)
-            print(
-                "Retention: OK; "
-                f"{retention_result.deleted_samples} Samples und "
-                f"{sum(retention_result.deleted_dependent_counts.values())} "
-                "abhängige Zeilen gelöscht"
-            )
-            print("Hinweis: Der Dateiplatz wird erst nach einem VACUUM frei.")
         elif args.dry_run:
             result = dry_run_database_migration(
                 args.database,

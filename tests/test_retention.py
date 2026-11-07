@@ -134,3 +134,51 @@ def test_apply_rejects_a_plan_for_another_database(tmp_path: Path) -> None:
 
     with pytest.raises(DatabaseMaintenanceError):
         apply_retention(second, plan)
+
+
+def test_cli_dry_run_reports_without_deleting(tmp_path: Path, capsys) -> None:
+    from database_cli import main
+
+    path = tmp_path / "retention.db"
+    _prepare(path)
+    with closing(sqlite3.connect(path)) as connection:
+        cursor = connection.execute(
+            "INSERT INTO samples (ts_epoch, ts_local) VALUES (?, ?)",
+            (NOW - 900 * DAY, "2027-01-01T00:00:00+00:00"),
+        )
+        _insert_phase(connection, int(cursor.lastrowid or 0))
+        connection.commit()
+
+    exit_code = main(
+        [
+            "--retention-dry-run",
+            "--keep-raw-days",
+            "30",
+            "--database",
+            str(path),
+        ]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Samples älter als die Grenze: 1" in output
+    assert "Retention-Dry-Run: OK" in output
+    with closing(sqlite3.connect(path)) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM samples").fetchone()[0] == 1
+
+
+def test_cli_apply_deletes_and_reports(tmp_path: Path, capsys) -> None:
+    from database_cli import main
+
+    path = tmp_path / "retention.db"
+    _prepare(path)
+    _seed(path, with_recent=True)
+
+    exit_code = main(
+        ["--apply-retention", "--keep-raw-days", "30", "--database", str(path)]
+    )
+    output = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "Retention: OK; 1 Samples" in output
+    assert "VACUUM" in output
