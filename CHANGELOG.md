@@ -16,9 +16,9 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
   (gemessen an der Sicherungskopie, Indexaufbau 6,8 s), wurde aber nicht
   eingebaut: der Gewinn von rund 3,8 s rechtfertigt die zusätzliche
   Indexpflege auf dem Referenzgerät derzeit nicht.
-- Die Wochen- und Monatsansicht aktualisiert sich selbst — Woche alle fünf,
-  Monat alle fünfzehn Minuten. Die Tagesansicht bleibt bei einer Minute. Eine
-  Ansicht in der Vergangenheit wird nicht mehr automatisch neu geladen.
+- Tag, Woche und Monat aktualisieren sich selbst im Minutentakt; ein Request
+  kostet rund 0,3 s. Die Jahresansicht lädt nicht automatisch. Eine Ansicht in
+  der Vergangenheit wird nicht neu geladen.
 
 ### Betrieb
 

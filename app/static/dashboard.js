@@ -61,9 +61,10 @@ function isCurrentRequest(period, anchor) {
   return state.period === period && state.anchor === anchor;
 }
 
-// The day view follows the running day, the week and month views only need
-// occasional updates. A period in the past never refreshes.
-const REFRESH_INTERVALS = {day: 60000, week: 300000, month: 900000};
+// Day, week and month follow the running period; a period in the past never
+// refreshes. A request costs about 0.3 s, so one minute is cheap enough for
+// all three views.
+const REFRESH_INTERVALS = {day: 60000, week: 60000, month: 60000};
 let nextAutoRefreshAt = 0;
 
 function periodStartKey(period, isoDate) {
@@ -622,7 +623,7 @@ window.addEventListener("resize", () => {
 loadDashboard();
 loadLive();
 setInterval(loadLive, 5000);
-setInterval(checkAutoRefresh, 30000);
+setInterval(checkAutoRefresh, 10000);
 
 async function loadValidationSummary() {
   const status = document.getElementById("validation-status");
