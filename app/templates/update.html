@@ -115,5 +115,5 @@
   <p id="update-error-message"></p>
 </section>
 
-<script src="{{ url_for('static', filename='update.js') }}"></script>
+<script src="{{ url_for('static', filename='update.js') }}?v={{ asset_version }}"></script>
 {% endblock %}

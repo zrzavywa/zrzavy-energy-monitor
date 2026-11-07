@@ -20,6 +20,62 @@ from zrzavy_energy_monitor_core.models.quality import MeasurementQuality
 from zrzavy_energy_monitor_core.models.roles import MeasurementRole
 from zrzavy_energy_monitor_core.models.source_selection import SourceSelectionResult
 
+# How many of the newest samples the "latest detail row" lookups may inspect.
+# Ordering a join over the whole detail tables by `samples.ts_epoch` made SQLite
+# scan the detail table and sort it in a temporary B-tree, which cost 5.7 s on
+# the reference installation with 224k rows. Reading a bounded window of the
+# newest samples through `idx_samples_ts_epoch` keeps the newest-timestamp
+# semantics while touching only this many sample rows.
+LATEST_SAMPLE_WINDOW: Final = 200
+
+LATEST_GRID_METER_SQL: Final = """
+    SELECT grid_meter_samples.*,
+           recent.ts_epoch,
+           recent.ts_local,
+           recent.grid_source
+    FROM (
+        SELECT id, ts_epoch, ts_local, grid_source
+        FROM samples
+        ORDER BY ts_epoch DESC
+        LIMIT ?
+    ) AS recent
+    JOIN grid_meter_samples
+      ON grid_meter_samples.sample_id = recent.id
+    WHERE grid_meter_samples.source_id = ?
+    ORDER BY recent.ts_epoch DESC
+    LIMIT 1
+    """
+
+LATEST_ENERGY_BALANCE_SQL: Final = """
+    SELECT energy_balance_samples.*,
+           recent.ts_epoch,
+           recent.ts_local
+    FROM (
+        SELECT id, ts_epoch, ts_local
+        FROM samples
+        ORDER BY ts_epoch DESC
+        LIMIT ?
+    ) AS recent
+    JOIN energy_balance_samples
+      ON energy_balance_samples.sample_id = recent.id
+    ORDER BY recent.ts_epoch DESC
+    LIMIT 1
+    """
+
+LATEST_PHASE_SQL: Final = """
+    SELECT phase_samples.*, recent.ts_epoch, recent.ts_local
+    FROM (
+        SELECT id, ts_epoch, ts_local
+        FROM samples
+        ORDER BY ts_epoch DESC
+        LIMIT ?
+    ) AS recent
+    JOIN phase_samples ON phase_samples.sample_id = recent.id
+    WHERE phase_samples.source_id = ?
+    ORDER BY recent.ts_epoch DESC
+    LIMIT 1
+    """
+
 
 class Database:
     """Database groups the public state and operations for this component."""
@@ -612,41 +668,30 @@ class Database:
         self,
         source_id: str = "grid_meter_primary",
     ) -> Optional[dict[str, Any]]:
-        """Return the newest official grid-meter detail row."""
+        """Return the newest official grid-meter detail row.
+
+        The lookup only inspects the newest samples from `LATEST_SAMPLE_WINDOW`
+        instead of sorting every detail row by time.
+        """
 
         with self.connect() as conn:
             row = conn.execute(
-                """
-                SELECT grid_meter_samples.*,
-                       samples.ts_epoch,
-                       samples.ts_local,
-                       samples.grid_source
-                FROM grid_meter_samples
-                JOIN samples
-                  ON samples.id = grid_meter_samples.sample_id
-                WHERE grid_meter_samples.source_id = ?
-                ORDER BY samples.ts_epoch DESC
-                LIMIT 1
-                """,
-                (source_id,),
+                LATEST_GRID_METER_SQL,
+                (LATEST_SAMPLE_WINDOW, source_id),
             ).fetchone()
         return dict(row) if row else None
 
     def latest_energy_balance_sample(self) -> Optional[dict[str, Any]]:
-        """Return the newest persisted energy-balance detail row."""
+        """Return the newest persisted energy-balance detail row.
+
+        The lookup only inspects the newest samples from `LATEST_SAMPLE_WINDOW`
+        instead of sorting every detail row by time.
+        """
 
         with self.connect() as conn:
             row = conn.execute(
-                """
-                SELECT energy_balance_samples.*,
-                       samples.ts_epoch,
-                       samples.ts_local
-                FROM energy_balance_samples
-                JOIN samples
-                  ON samples.id = energy_balance_samples.sample_id
-                ORDER BY samples.ts_epoch DESC
-                LIMIT 1
-                """
+                LATEST_ENERGY_BALANCE_SQL,
+                (LATEST_SAMPLE_WINDOW,),
             ).fetchone()
         return dict(row) if row else None
 
@@ -654,19 +699,16 @@ class Database:
         self,
         source_id: str = "house_meter",
     ) -> Optional[dict[str, Any]]:
-        """Return the newest persisted phase row for one source."""
+        """Return the newest persisted phase row for one source.
+
+        The lookup only inspects the newest samples from `LATEST_SAMPLE_WINDOW`
+        instead of sorting every phase row by time.
+        """
 
         with self.connect() as conn:
             row = conn.execute(
-                """
-                SELECT phase_samples.*, samples.ts_epoch, samples.ts_local
-                FROM phase_samples
-                JOIN samples ON samples.id = phase_samples.sample_id
-                WHERE phase_samples.source_id = ?
-                ORDER BY samples.ts_epoch DESC
-                LIMIT 1
-                """,
-                (source_id,),
+                LATEST_PHASE_SQL,
+                (LATEST_SAMPLE_WINDOW, source_id),
             ).fetchone()
         return dict(row) if row else None
 

@@ -135,7 +135,10 @@ from zrzavy_energy_monitor_core.web.api import (
 from zrzavy_energy_monitor_core.web.configuration import (
     apply_configuration_form,
 )
-from zrzavy_energy_monitor_core.web.context import build_template_context
+from zrzavy_energy_monitor_core.web.context import (
+    build_template_context,
+    compute_asset_version,
+)
 from zrzavy_energy_monitor_core.web.export import (
     DEFAULT_MAXIMUM_EXPORT_ROWS,
     build_csv_export,
@@ -184,6 +187,7 @@ def get_installed_version() -> str:
 
 
 APP_VERSION = get_installed_version()
+ASSET_VERSION = compute_asset_version(Path(__file__).resolve().parent / "static")
 
 
 
@@ -303,6 +307,7 @@ def template_context() -> dict[str, Any]:
         config=config_manager.get(),
         collector_running=collector.is_running(),
         app_version=APP_VERSION,
+        asset_version=ASSET_VERSION,
         device_types=DEVICE_TYPES,
     )
 
