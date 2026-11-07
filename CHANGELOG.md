@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+Keine Änderungen seit 4.6.0.
+
+## [4.6.0] - 2026-11-07
+
 ### Behoben
 
 - Die Live-Ansicht antwortete auf der Referenzinstallation rund 6 Sekunden.
@@ -44,13 +48,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Betrieb
 
-- Referenzinstallation (Raspberry Pi OS): Das Release-Verzeichnis `4.5.5`
-  wurde am 2026-11-07 mit dem Stand von `main` (`dd8442b`) aktualisiert —
-  sieben Dateien, Sicherung unter `/var/backups/zem-deploy-20261107-1252`.
-  Gemessen danach: Tag 0,06 s, Woche 0,27 s, Monat 0,34 s, Jahr 6,94 s.
-  Rollback: `before.tar` über das Release-Verzeichnis entpacken und den Dienst
-  neu starten. Ein späteres reguläres Update auf 4.5.5 würde diese lokalen
-  Dateien überschreiben; der nächste Release muss diesen Stand enthalten.
+- Referenzinstallation (Raspberry Pi OS), Stand 2026-11-07: Tag 0,06 s,
+  Woche 0,27 s, Monat 0,34 s, Jahr 6,88 s, Live 0,06 s. Vor der
+  Aggregationsumstellung lag die Jahresansicht bei 148 s und die Live-Ansicht
+  bei 5,9 s. Sicherungen der Deployments liegen unter
+  `/var/backups/zem-deploy-20261107-*`.
 
 ## [4.5.5] - 2026-07-29
 
