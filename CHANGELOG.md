@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+Keine Änderungen.
+
+## [4.8.0] — 2026-11-08
+
 ### Hinzugefügt
 
 - Dashboard: Die Wertetabelle zeigt für jede Zeile des gewählten Zeitraums die
