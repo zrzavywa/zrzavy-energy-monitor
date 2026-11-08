@@ -694,9 +694,12 @@ body.is-loading .chart-panel {
 
   .values-table thead th {
     position: static;
-    /* Lange Spaltenköpfe umbrechen, statt die Tabelle zu verbreitern. */
+    /* Lange Spaltenköpfe umbrechen, statt die Tabelle zu verbreitern.
+       Silbentrennung zuerst, damit "Eigenverbrauchsquote" nicht mitten im
+       Wort auseinanderfaellt; overflow-wrap bleibt die Rueckfallebene. */
     white-space: normal;
-    overflow-wrap: anywhere;
+    hyphens: auto;
+    overflow-wrap: break-word;
     letter-spacing: 0;
     line-height: 1.25;
     font-size: 8pt;
@@ -721,27 +724,35 @@ body.is-loading .chart-panel {
   }
 
   .values-table th:nth-child(1) {
-    width: 12%;
+    width: 11%;
   }
 
   .values-table th:nth-child(2) {
-    width: 15%;
+    width: 12%;
   }
 
   .values-table th:nth-child(3) {
-    width: 21%;
-  }
-
-  .values-table th:nth-child(4) {
-    width: 17%;
-  }
-
-  .values-table th:nth-child(5) {
     width: 15%;
   }
 
+  .values-table th:nth-child(4) {
+    width: 13%;
+  }
+
+  .values-table th:nth-child(5) {
+    width: 12%;
+  }
+
   .values-table th:nth-child(6) {
-    width: 20%;
+    width: 12%;
+  }
+
+  .values-table th:nth-child(7) {
+    width: 13%;
+  }
+
+  .values-table th:nth-child(8) {
+    width: 12%;
   }
 
   .values-table tr {

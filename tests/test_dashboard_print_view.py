@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 import zrzavy_energy_monitor as application
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -102,3 +103,42 @@ def test_dashboard_script_prepares_the_print_report() -> None:
     assert "toLocaleDateString" in script
     assert "refreshPrintChart()" in script
     assert "has-print-chart" in script
+
+
+def test_value_table_offers_the_quota_columns() -> None:
+    """The value table has eight columns including both quota columns."""
+
+    html = _dashboard_html()
+    assert html.count('<th scope="col">') == 8
+    assert "Eigenverbrauchsquote" in html
+    assert "Autarkiegrad" in html
+    assert 'colspan="8"' in html
+    assert 'colspan="6"' not in html
+
+
+def test_print_rules_define_widths_for_all_eight_columns() -> None:
+    """The fixed print layout must cover every column and stay at 100 %."""
+
+    css = STYLE_FILE.read_text(encoding="utf-8")
+    print_block = _css_block(css, "@media print")
+    widths = {
+        int(match.group(1)): float(match.group(2))
+        for match in re.finditer(
+            r"\.values-table th:nth-child\((\d+)\) \{\s*width: ([\d.]+)%;",
+            print_block,
+        )
+    }
+
+    assert sorted(widths) == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert sum(widths.values()) == pytest.approx(100.0)
+
+
+def test_dashboard_script_renders_the_quotas_from_the_series() -> None:
+    """The table reads both quotas from the payload and formats them as percent."""
+
+    script = SCRIPT_FILE.read_text(encoding="utf-8")
+    assert 'series: "self_consumption_pct"' in script
+    assert 'series: "autarky_pct"' in script
+    assert 'format: "pct"' in script
+    assert "sample_count" in script
+    assert "formatCell(data.kpi[column.kpi]" in script

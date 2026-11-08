@@ -100,12 +100,17 @@ function checkAutoRefresh() {
 }
 
 const VALUE_COLUMNS = [
-  {label: "Erzeugung", series: "solar_kwh", kpi: "solar_kwh"},
-  {label: "Hausverbrauch", series: "house_kwh", kpi: "house_kwh"},
-  {label: "Netzbezug", series: "grid_import_kwh", kpi: "grid_import_kwh"},
-  {label: "Einspeisung", series: "feed_in_kwh", kpi: "feed_in_kwh"},
-  {label: "Eigenverbrauch", series: "self_consumption_kwh", kpi: "self_consumption_kwh"}
+  {label: "Erzeugung", series: "solar_kwh", kpi: "solar_kwh", format: "kwh"},
+  {label: "Hausverbrauch", series: "house_kwh", kpi: "house_kwh", format: "kwh"},
+  {label: "Netzbezug", series: "grid_import_kwh", kpi: "grid_import_kwh", format: "kwh"},
+  {label: "Einspeisung", series: "feed_in_kwh", kpi: "feed_in_kwh", format: "kwh"},
+  {label: "Eigenverbrauch", series: "self_consumption_kwh", kpi: "self_consumption_kwh", format: "kwh"},
+  {label: "Eigenverbrauchsquote", series: "self_consumption_pct", kpi: "self_consumption_pct", format: "pct"},
+  {label: "Autarkiegrad", series: "autarky_pct", kpi: "autarky_pct", format: "pct"}
 ];
+
+const formatCell = (value, format) =>
+  format === "pct" ? pct(value) : formatNumber(value, 3);
 
 function renderValueTable() {
   const body = document.getElementById("values-body");
@@ -114,14 +119,21 @@ function renderValueTable() {
   const data = state.dashboard;
   if (!body || !foot || !data) return;
   if (title) title.textContent = `Werte · ${data.title}`;
+  // The quota columns need a measurement per row: a day without a single sample
+  // must not read as "0 %". The energy columns keep their existing zero sums.
+  const sampleCounts = data.series.sample_count || [];
   body.innerHTML = data.labels.map((label, index) => {
+    const measured = !sampleCounts.length || sampleCounts[index] > 0;
     const cells = VALUE_COLUMNS.map(column => {
-      const value = data.series[column.series][index];
-      return `<td>${formatNumber(value, 3)}</td>`;
+      if (!measured && column.format === "pct") return "<td>–</td>";
+      const value = (data.series[column.series] || [])[index];
+      return `<td>${formatCell(value, column.format)}</td>`;
     }).join("");
     return `<tr><th scope="row">${escapeHTML(label)}</th>${cells}</tr>`;
   }).join("");
-  foot.innerHTML = `<tr><th scope="row">Summe</th>${VALUE_COLUMNS.map(column => `<td>${formatNumber(data.kpi[column.kpi], 3)}</td>`).join("")}</tr>`;
+  // The footer shows the quotients of the summed energy, not the sum of the row
+  // percentages; data.kpi already holds exactly those two quotients.
+  foot.innerHTML = `<tr><th scope="row">Summe</th>${VALUE_COLUMNS.map(column => `<td>${formatCell(data.kpi[column.kpi], column.format)}</td>`).join("")}</tr>`;
 }
 
 function startLoading() {

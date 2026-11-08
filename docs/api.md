@@ -261,12 +261,16 @@ Finding-Strukturen sind erweiterbar.
 - **Request:** kein Body.
 - **Erfolg:** `200`; mindestens `period`, `anchor`, `title`, `labels`,
   Zeitreihen und `kpi`. Ein leerer Zeitraum enthält eine Sample-Anzahl von
-  `0`.
+  `0`. `series` enthält je Bucket zusätzlich `self_consumption_pct` und
+  `autarky_pct` (Prozent mit einer Nachkommastelle) sowie `sample_count`
+  (Anzahl der Messungen im Bucket). Beide Quotienten sind `null`, wenn der
+  Nenner `0` ist; sie werden nicht auf `0` oder `100` gesetzt.
 - **Fehler:** keine fachlichen `4xx` für ungültige Parameter; unerwartete
   Fehler ergeben `500`.
 - **Einheiten und Vorzeichen:** Leistung `W`, Energie `Wh` beziehungsweise
-  `kWh` gemäß Feldsuffix; lokale Datumsgrenzen und ISO-Datum für `anchor`;
-  Netzvorzeichen wie oben.
+  `kWh` gemäß Feldsuffix; Quoten als Prozent mit einer Nachkommastelle, wobei
+  `null` einen nicht definierten Wert bezeichnet; lokale Datumsgrenzen und
+  ISO-Datum für `anchor`; Netzvorzeichen wie oben.
 - **Seiteneffekt und Sicherheit:** lesender Zugriff auf aggregierte
   Messhistorie, ohne Zugriffsschutz. Die Aggregation läuft in SQLite und
   überträgt je Stunde einen Aggregatsatz; die Antwortzeit hängt damit nicht
@@ -274,6 +278,9 @@ Finding-Strukturen sind erweiterbar.
 - **Synthetisches Beispiel:** `GET
   /api/dashboard?period=day&anchor=2026-07-27` liefert unter anderem
   `{"period":"day","anchor":"2026-07-27","labels":["00:00"],"kpi":{"sample_count":0}}`.
+  Für einen Bucket mit Erzeugung liefert `series.self_consumption_pct[0]` zum
+  Beispiel `88.3`; ein Bucket ohne Messung führt zu `null` in beiden
+  Quotienten und zu `sample_count[0] == 0`.
 
 ## Validierung und Phasen
 
@@ -634,5 +641,6 @@ produktiver Nutzung erneut geprüft werden.
 
 ## Dokument-Change-Log
 
+- 2026-11-08 — `/api/dashboard`: Serien `self_consumption_pct`, `autarky_pct` und `sample_count` je Bucket dokumentiert, inklusive `null`-Regel bei Nenner `0`; Anlass/Quelle: Betreiberanforderung Eigenverbrauchsquote und Autarkiegrad je Zeile in Wertetabelle und Ausdruck; Prüfstatus: Code, Tests und Antwort der lokalen Instanz abgeglichen, `./scripts/verify.sh` PASS.
 - 2026-11-07 — Phasen-API: `year` liefert Monatsmittel je Kalendermonat; Hinweis zur Jahresansicht ersetzt; Anlass/Quelle: Betreiberfreigabe für den Phasenverlauf im Jahr, Messung 39,1 s vor der SQL-Monatsaggregation; Prüfstatus: Code und Tests abgeglichen.
 - 2026-11-07 — `period` um `month` ergänzt, Aggregationshinweis für `/api/dashboard` und Hinweis zur Jahresansicht der Phasen-API aufgenommen; Anlass/Quelle: Betreiberanforderung Monatsauswahl und Latenzanalyse; Prüfstatus: Code und Tests abgeglichen, `./scripts/verify.sh` PASS.

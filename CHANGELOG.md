@@ -6,7 +6,24 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
-Keine Änderungen.
+### Hinzugefügt
+
+- Dashboard: Die Wertetabelle zeigt für jede Zeile des gewählten Zeitraums die
+  Eigenverbrauchsquote und den Autarkiegrad in Prozent. Beide Werte stehen auch
+  im Ausdruck, in der Tabelle je Zeile und in der Kennzahlenzeile.
+- Ist der Nenner einer Quote `0` oder liegt für die Zeile keine einzige Messung
+  vor, zeigt die Zelle einen Gedankenstrich statt `0 %`. Die kWh-Spalten
+  behalten ihre Nullsummen.
+
+### Geändert
+
+- Die Summenzeile zeigt den Quotienten der Summen, nicht die Summe der
+  Zeilenquoten. Der Tabellenuntertitel benennt diesen Unterschied.
+- `/api/dashboard` liefert zusätzlich die Serien `self_consumption_pct`,
+  `autarky_pct` und `sample_count` je Bucket. Die Ergänzung ist additiv und
+  benötigt keine zusätzliche Datenbankabfrage und keine Schemaänderung.
+- Der Ausdruck verteilt die acht Spalten über feste Breiten; die beiden neuen
+  Spalten laufen dadurch nicht über den Papierrand.
 
 ## [4.7.1] — 2026-11-08
 

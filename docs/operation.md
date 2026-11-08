@@ -303,13 +303,26 @@ Gedruckt werden:
 
 - Kopf mit Periodentitel, Datenstand und Erzeugungszeitpunkt,
 - das Energie-Diagramm (Erzeugung, Hausverbrauch, Netzbezug, Einspeisung),
-- die vollständige Wertetabelle des Zeitraums mit Summenzeile,
+- die vollständige Wertetabelle des Zeitraums mit Summenzeile sowie je Zeile
+  Eigenverbrauchsquote und Autarkiegrad,
 - die Kennzahlenzeile (Ertrag, Hausverbrauch, Netzbezug, Einspeisung,
   Eigenverbrauchsquote, Autarkiegrad).
 
 Nicht gedruckt werden Live-Karten, Momentan-Energiebilanz,
 Plausibilitätsprüfung, Netzstromzähler, Phasen- und Solakon-Panel sowie
 Navigation und Seitenfuß.
+
+**Spalten der Wertetabelle:** Zeitraum, Erzeugung, Hausverbrauch, Netzbezug,
+Einspeisung, Eigenverbrauch, Eigenverbrauchsquote und Autarkiegrad. Die beiden
+Quoten gelten je Zeile und entstehen aus den Zeilenwerten: Eigenverbrauch
+geteilt durch Erzeugung beziehungsweise durch Hausverbrauch. Die Summenzeile
+zeigt dagegen den Quotienten der Summen, nicht die Summe der Zeilenquoten;
+sie stimmt damit mit den Kennzahlen Eigenverbrauchsquote und Autarkiegrad
+überein. Ein Gedankenstrich in einer Quotenspalte bedeutet, dass der Nenner
+`0` ist oder für die Zeile keine einzige Messung vorliegt — die kWh-Spalten
+zeigen in diesem Fall weiterhin `0,000`. Liegt eine Quote über 100 %, weichen
+Bilanz- und Messreihenquelle voneinander ab; der Wert wird bewusst nicht
+geklemmt.
 
 **Zeitangaben:** „Stand“ ist der Zeitpunkt, an dem die angezeigten Zahlen
 geladen wurden. „Ausdruck“ ist der Zeitpunkt des Druckbefehls. Bei einer
@@ -330,6 +343,7 @@ selbst, nicht die Anwendung.
 
 ## Dokument-Change-Log
 
+- 2026-11-08 — Wertetabelle um Eigenverbrauchsquote und Autarkiegrad je Zeile ergänzt, Spaltenübersicht, Gedankenstrich-Regel und Summenzeilen-Logik dokumentiert; Anlass/Quelle: Betreiberanforderung Quoten je Zeile auch im Ausdruck; Prüfstatus: Umsetzung und Tests abgeglichen, Ausdruck mit Headless-Chromium bei 703 px gemessen (Tabelle 669 px im Container, kein Abschnitt), `./scripts/verify.sh` PASS.
 - 2026-11-08 — Abschnitt „Ausdruck der Periodenübersicht“ mit Druckumfang, Zeitangaben und Chrome-Einstellungen ergänzt; Anlass/Quelle: Betreiberanforderung Druck der Periodenübersicht (4.7.0); Prüfstatus: Umsetzung und Tests abgeglichen, Sichtprüfung im Browser steht aus.
 - 2026-11-07 — Abschnitte „Aufbewahrung und Aufräumen der Rohdaten“, „Abgebrochener Wartungsversuch am 2026-11-07“ und „Release einspielen“ ergänzt; Anlass/Quelle: Retention-Befehl ab 4.6.1, abgebrochenes Aufräumfenster und fehlende `.venv` beim Deployment von 4.6.1; Prüfstatus: Befehle auf der Referenzinstallation ausgeführt (Dry Run), Deployment-Schritte am 2026-11-07 zweimal durchlaufen.
 - 2026-11-07 — Abschnitt „Wartungsfenster für die Datenbank" mit gemessenen Wartezeiten und Abbruchregeln ergänzt; Anlass/Quelle: Wartungsversuch auf der Referenzinstallation (6 GB, USB, `quick_check` > 25 min); Prüfstatus: Messwerte aus dem Betriebsprotokoll, Vorgehen angewandt und dokumentiert.

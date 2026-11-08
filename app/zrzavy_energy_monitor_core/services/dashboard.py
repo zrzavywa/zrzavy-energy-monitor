@@ -31,6 +31,19 @@ ENERGY_SERIES_KEYS = (
 )
 
 
+def _ratio(values: list[float], denominators: list[float]) -> list[float | None]:
+    """Return percentages with one decimal, or None where the denominator is 0.
+
+    A missing denominator means the quotient is undefined; the dashboard shows a
+    dash there instead of inventing 0 % or 100 %.
+    """
+
+    return [
+        round(value / denominator * 100.0, 1) if denominator > 0 else None
+        for value, denominator in zip(values, denominators)
+    ]
+
+
 def build_dashboard(database: Database, period: str, anchor: date) -> dict[str, Any]:
     """Build one dashboard period from hourly database aggregates."""
 
@@ -45,7 +58,7 @@ def build_dashboard(database: Database, period: str, anchor: date) -> dict[str, 
     difference_count = [0] * bucket_count
     difference_pct_sum = [0.0] * bucket_count
     difference_pct_count = [0] * bucket_count
-    sample_count = 0
+    bucket_sample_count = [0] * bucket_count
 
     for hour in database.aggregate_samples_by_hour(start.timestamp(), end.timestamp()):
         index = bucket_index(
@@ -55,7 +68,7 @@ def build_dashboard(database: Database, period: str, anchor: date) -> dict[str, 
         )
         if not 0 <= index < bucket_count:
             continue
-        sample_count += int(hour["sample_count"] or 0)
+        bucket_sample_count[index] += int(hour["sample_count"] or 0)
         for key in ENERGY_SERIES_KEYS:
             buckets[key][index] += float(hour[key] or 0.0)
         hour_soc_count = int(hour["soc_count"] or 0)
@@ -88,6 +101,7 @@ def build_dashboard(database: Database, period: str, anchor: date) -> dict[str, 
             difference_pct_count[index] += hour_pct_count
 
     totals = {key: sum(values) for key, values in buckets.items()}
+    sample_count = sum(bucket_sample_count)
     total_soc_count = sum(soc_count)
     total_difference_count = sum(difference_count)
     total_pct_count = sum(difference_pct_count)
@@ -130,6 +144,15 @@ def build_dashboard(database: Database, period: str, anchor: date) -> dict[str, 
                 else None
                 for index in range(bucket_count)
             ],
+            # Per-bucket percentages use the same formulas and denominator rules
+            # as the period KPIs, so a row and the footer never disagree.
+            "self_consumption_pct": _ratio(
+                buckets["self_consumption_wh"], buckets["solar_wh"]
+            ),
+            "autarky_pct": _ratio(buckets["self_consumption_wh"], buckets["house_wh"]),
+            # Rows without a single sample stay distinguishable from measured
+            # zeros; the table renders those quota cells as a dash.
+            "sample_count": bucket_sample_count,
         },
         "kpi": {
             "solar_kwh": round(solar / 1000.0, 3),

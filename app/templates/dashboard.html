@@ -237,7 +237,10 @@
     <div>
       <p class="eyebrow">WERTE</p>
       <h2 id="values-title">Werte im Zeitraum</h2>
-      <p>Zahlenwerte des gewählten Zeitraums in kWh, unabhängig vom Diagramm ablesbar.</p>
+      <p>Zahlenwerte des gewählten Zeitraums in kWh, unabhängig vom Diagramm ablesbar.
+         Eigenverbrauchsquote und Autarkiegrad gelten je Zeile; die Summenzeile bildet
+         den Quotienten der Summen, nicht die Summe der Quoten. Ein Gedankenstrich
+         bedeutet, dass der Wert für die Zeile nicht definiert oder nicht gemessen ist.</p>
     </div>
   </div>
   <div class="values-table-wrap">
@@ -250,10 +253,12 @@
           <th scope="col">Netzbezug</th>
           <th scope="col">Einspeisung</th>
           <th scope="col">Eigenverbrauch</th>
+          <th scope="col">Eigenverbrauchsquote</th>
+          <th scope="col">Autarkiegrad</th>
         </tr>
       </thead>
       <tbody id="values-body">
-        <tr><td colspan="6" class="values-empty">Noch keine Werte geladen.</td></tr>
+        <tr><td colspan="8" class="values-empty">Noch keine Werte geladen.</td></tr>
       </tbody>
       <tfoot id="values-foot"></tfoot>
     </table>
