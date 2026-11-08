@@ -35,6 +35,8 @@ def test_running_version_wins_over_stale_status(tmp_path: Path) -> None:
     assert status["status_installed_version"] == "4.5.3"
     assert status["available_version"] == "4.5.5"
     assert status["state"] == "success"
+    # The stored record cannot describe the running installation.
+    assert status["status_is_historic"] is True
 
 
 def test_matching_version_stays_untouched(tmp_path: Path) -> None:
@@ -48,6 +50,7 @@ def test_matching_version_stays_untouched(tmp_path: Path) -> None:
 
     assert status["installed_version"] == "4.6.1"
     assert "status_installed_version" not in status
+    assert status["status_is_historic"] is False
 
 
 def test_without_a_running_version_the_file_is_returned_as_is(
@@ -60,3 +63,4 @@ def test_without_a_running_version_the_file_is_returned_as_is(
 
     assert status["installed_version"] == "4.5.3"
     assert "status_installed_version" not in status
+    assert "status_is_historic" not in status

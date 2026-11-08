@@ -8,6 +8,24 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.8.1] — 2026-11-08
+
+### Behoben
+
+- Die Update-Seite meldete einen alten Vorgang als Ergebnis der laufenden
+  Installation: „Zrzavy Energy Monitor 4.5.5 wurde erfolgreich installiert“,
+  während oben 4.8.0 als installiert stand. Ursache war ein Statusdatensatz vom
+  29.07.2026, den manuelle Deployments nie fortschreiben. Die Seite zeigt einen
+  solchen Datensatz jetzt als älteren Vorgang: Status mit Zusatz, Fortschritt
+  und verifizierte Version als Gedankenstrich, dazu Datum, damals eingespielte
+  Version und der Hinweis, dass die laufende Version nicht aus diesem Vorgang
+  stammt. Die Erfolgsmeldung erscheint nur noch für die laufende Version.
+
+### Geändert
+
+- `/api/update/status` liefert zusätzlich `status_is_historic`. Die Ergänzung
+  ist additiv; `installed_version` bleibt weiterhin die laufende Version.
+
 ## [4.8.0] — 2026-11-08
 
 ### Hinzugefügt

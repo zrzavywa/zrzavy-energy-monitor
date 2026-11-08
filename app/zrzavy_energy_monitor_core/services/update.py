@@ -72,6 +72,8 @@ def read_update_status_response(
     version in that file which no longer describes what is running. The
     running version therefore wins, and the stored value stays visible as
     status_installed_version so the difference remains traceable.
+    status_is_historic marks such a record, so the dashboard does not present
+    an old update as the outcome of the running installation.
     """
     status = status_reader(status_path)
     if running_version is None:
@@ -81,6 +83,11 @@ def read_update_status_response(
     if stored_version != running_version:
         status["status_installed_version"] = stored_version
         status["installed_version"] = running_version
+        # The stored record describes a version that is not running, so it
+        # cannot be reported as the outcome of the current installation.
+        status["status_is_historic"] = True
+    else:
+        status["status_is_historic"] = False
     return status
 
 

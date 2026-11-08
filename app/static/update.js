@@ -250,36 +250,80 @@ function formatUpdateState(state) {
 }
 
 
-function renderDownloadStatus(payload) {
+function formatStatusTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleString("de-DE", {dateStyle: "medium", timeStyle: "short"});
+}
+
+// A stored status that names another version than the running one does not
+// describe the current installation: it stays behind whenever a release is
+// installed by hand. The API marks such a record with status_is_historic, so
+// the panel shows it as history instead of claiming a fresh success.
+function buildDownloadStatusView(payload) {
   const state = payload.state || "idle";
   const progress = Number(payload.progress || 0);
+  const storedVersion = payload.available_version || "";
+  const runningVersion = payload.installed_version || "";
 
-  downloadState.textContent = formatUpdateState(state);
-  downloadProgress.textContent = `${progress} %`;
-  downloadProgressBar.value = progress;
-  downloadMessage.textContent =
-    payload.message || "Kein Status verfügbar.";
+  if (!payload.status_is_historic) {
+    return {
+      stateLabel: formatUpdateState(state),
+      progressLabel: `${progress} %`,
+      progressValue: progress,
+      verifiedVersion: storedVersion || "–",
+      message: payload.message || "Kein Status verfügbar.",
+      result:
+        state === "success"
+          ? `Zrzavy Energy Monitor ${storedVersion} wurde erfolgreich installiert.`
+          : state === "failed"
+            ? payload.message || "Die Installation ist fehlgeschlagen."
+            : null,
+      historic: false
+    };
+  }
 
-  verifiedVersion.textContent =
-    payload.available_version || "–";
+  const when = formatStatusTime(payload.updated_at);
+  const target = storedVersion ? `Version ${storedVersion}` : "eine frühere Version";
+  const outcome =
+    state === "failed"
+      ? ` Der Vorgang endete mit: ${payload.message || "Fehler"}.`
+      : "";
+  return {
+    stateLabel: `${formatUpdateState(state)} · älterer Vorgang`,
+    progressLabel: "–",
+    progressValue: 0,
+    verifiedVersion: "–",
+    message: `${when ? `Am ${when}` : "Zuletzt"} wurde ${target} über den Updater eingespielt.${outcome} Die laufende Version ${runningVersion || "–"} stammt nicht aus diesem Vorgang.`,
+    result: null,
+    historic: true
+  };
+}
+
+function renderDownloadStatus(payload) {
+  const view = buildDownloadStatusView(payload);
+
+  downloadState.textContent = view.stateLabel;
+  downloadProgress.textContent = view.progressLabel;
+  downloadProgressBar.value = view.progressValue;
+  downloadMessage.textContent = view.message;
+  verifiedVersion.textContent = view.verifiedVersion;
 
   const canInstall =
-    state === "verified" &&
+    (payload.state || "idle") === "verified" &&
     Boolean(payload.available_version) &&
-    Boolean(payload.archive_path);
+    Boolean(payload.archive_path) &&
+    !view.historic;
 
   if (installButton) {
     installButton.disabled = !canInstall;
   }
 
-  if (state === "success") {
+  if (view.result) {
     installationResult.hidden = false;
-    installationResult.textContent =
-      `Zrzavy Energy Monitor ${payload.available_version || ""} wurde erfolgreich installiert.`;
-  } else if (state === "failed") {
-    installationResult.hidden = false;
-    installationResult.textContent =
-      payload.message || "Die Installation ist fehlgeschlagen.";
+    installationResult.textContent = view.result;
   } else {
     installationResult.hidden = true;
   }
