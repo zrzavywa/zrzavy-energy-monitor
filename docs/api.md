@@ -551,7 +551,8 @@ API-Aufrufen.
   laufende Version. Nennt die gespeicherte Datei eine andere Version, bleibt
   sie als `status_installed_version` sichtbar und `status_is_historic` ist
   `true`; der gespeicherte Vorgang beschreibt dann nicht die laufende
-  Installation.
+  Installation. Fehlt die Datei, ist `status_is_historic` `false`: es gibt
+  keinen Vorgang, den man als historisch kennzeichnen könnte.
 - **Fehler:** kein fachlicher Fehlerstatus; eine fehlende oder beschädigte
   Statusdatei ist kein Fehler.
 - **Einheiten und Zeit:** `progress` ist Prozent; `updated_at` ist UTC als
@@ -645,6 +646,7 @@ produktiver Nutzung erneut geprüft werden.
 
 ## Dokument-Change-Log
 
+- 2026-11-08 — `/api/update/status`: `status_is_historic` ist bei fehlender Statusdatei `false`; Anlass/Quelle: nach dem Archivieren des Altstands zeigte die Ableitung fälschlich einen historischen Vorgang ohne gespeicherte Version; Prüfstatus: Code, Test und laufende Installation 4.8.1 abgeglichen.
 - 2026-11-08 — `/api/update/status`: Feld `status_is_historic` dokumentiert, das einen gespeicherten Vorgang einer anderen Version kennzeichnet; Anlass/Quelle: Update-Seite meldete „4.5.5 wurde erfolgreich installiert“ bei laufender Version 4.8.0 (Altstand vom 29.07.2026, manuelle Deployments schreiben die Statusdatei nicht fort); Prüfstatus: Code und Tests abgeglichen, `./scripts/verify.sh` PASS.
 - 2026-11-08 — `/api/dashboard`: Serien `self_consumption_pct`, `autarky_pct` und `sample_count` je Bucket dokumentiert, inklusive `null`-Regel bei Nenner `0`; Anlass/Quelle: Betreiberanforderung Eigenverbrauchsquote und Autarkiegrad je Zeile in Wertetabelle und Ausdruck; Prüfstatus: Code, Tests und Antwort der lokalen Instanz abgeglichen, `./scripts/verify.sh` PASS.
 - 2026-11-07 — Phasen-API: `year` liefert Monatsmittel je Kalendermonat; Hinweis zur Jahresansicht ersetzt; Anlass/Quelle: Betreiberfreigabe für den Phasenverlauf im Jahr, Messung 39,1 s vor der SQL-Monatsaggregation; Prüfstatus: Code und Tests abgeglichen.

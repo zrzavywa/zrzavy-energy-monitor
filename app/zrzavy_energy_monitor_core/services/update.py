@@ -85,7 +85,8 @@ def read_update_status_response(
         status["installed_version"] = running_version
         # The stored record describes a version that is not running, so it
         # cannot be reported as the outcome of the current installation.
-        status["status_is_historic"] = True
+        # Without any stored version there is no historic record to show.
+        status["status_is_historic"] = stored_version is not None
     else:
         status["status_is_historic"] = False
     return status

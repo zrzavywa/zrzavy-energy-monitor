@@ -64,3 +64,16 @@ def test_without_a_running_version_the_file_is_returned_as_is(
     assert status["installed_version"] == "4.5.3"
     assert "status_installed_version" not in status
     assert "status_is_historic" not in status
+
+
+def test_a_file_without_a_version_is_not_historic(tmp_path: Path) -> None:
+    """An empty status file means idle, not a forgotten update."""
+
+    status = read_update_status_response(
+        tmp_path / "update-status.json",
+        _reader({}),
+        running_version="4.8.1",
+    )
+
+    assert status["installed_version"] == "4.8.1"
+    assert status["status_is_historic"] is False

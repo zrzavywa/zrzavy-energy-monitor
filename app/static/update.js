@@ -118,8 +118,7 @@ async function checkForUpdate() {
       payload.release_name || `Zrzavy Energy Monitor ${payload.available_version}`;
 
     publishedAt.textContent = formatDate(payload.published_at);
-    releaseNotes.textContent =
-      payload.release_notes || "Für dieses Release sind keine Hinweise vorhanden.";
+    renderReleaseNotes(releaseNotes, payload.release_notes);
 
     if (payload.release_url) {
       releaseLink.href = payload.release_url;
@@ -249,6 +248,128 @@ function formatUpdateState(state) {
   return labels[state] || state || "Unbekannt";
 }
 
+
+// The release notes arrive as the Markdown body of a GitHub release. They are
+// built as DOM nodes with textContent only: no innerHTML, no HTML from the
+// release, and links are restricted to https.
+function appendInlineMarkup(parent, text) {
+  const pattern = /`([^`]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let cursor = 0;
+  let match = pattern.exec(text);
+
+  while (match) {
+    if (match.index > cursor) {
+      parent.appendChild(document.createTextNode(text.slice(cursor, match.index)));
+    }
+
+    if (match[1] !== undefined) {
+      const code = document.createElement("code");
+      code.textContent = match[1];
+      parent.appendChild(code);
+    } else if (match[2] !== undefined) {
+      const strong = document.createElement("strong");
+      strong.textContent = match[2];
+      parent.appendChild(strong);
+    } else {
+      const link = document.createElement("a");
+      link.textContent = match[3];
+      link.href = match[4];
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      parent.appendChild(link);
+    }
+
+    cursor = match.index + match[0].length;
+    match = pattern.exec(text);
+  }
+
+  if (cursor < text.length) {
+    parent.appendChild(document.createTextNode(text.slice(cursor)));
+  }
+}
+
+function renderReleaseNotes(container, source) {
+  container.replaceChildren();
+  const text = (source || "").trim();
+
+  if (!text) {
+    const empty = document.createElement("p");
+    empty.textContent = "Für dieses Release sind keine Hinweise vorhanden.";
+    container.appendChild(empty);
+    return;
+  }
+
+  let list = null;
+  let item = null;
+  let fence = null;
+
+  const closeList = () => {
+    if (list) {
+      container.appendChild(list);
+      list = null;
+      item = null;
+    }
+  };
+
+  text.split(/\r?\n/).forEach(rawLine => {
+    const line = rawLine.trim();
+
+    // A fenced block keeps its own lines and whitespace.
+    if (line.startsWith("```")) {
+      if (fence) {
+        container.appendChild(fence);
+        fence = null;
+      } else {
+        closeList();
+        fence = document.createElement("pre");
+        fence.appendChild(document.createElement("code"));
+      }
+      return;
+    }
+    if (fence) {
+      const code = fence.firstChild;
+      code.textContent += (code.textContent ? "\n" : "") + rawLine;
+      return;
+    }
+
+    // Hard-wrapped release notes continue an item on an indented line.
+    if (/^\s{2,}\S/.test(rawLine) && item) {
+      appendInlineMarkup(item, ` ${line}`);
+      return;
+    }
+    if (!line) {
+      closeList();
+      return;
+    }
+
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      closeList();
+      const level = Math.min(3 + heading[1].length - 1, 6);
+      const element = document.createElement(`h${level}`);
+      appendInlineMarkup(element, heading[2]);
+      container.appendChild(element);
+      return;
+    }
+
+    const bullet = /^[-*]\s+(.*)$/.exec(line);
+    if (bullet) {
+      if (!list) list = document.createElement("ul");
+      item = document.createElement("li");
+      appendInlineMarkup(item, bullet[1]);
+      list.appendChild(item);
+      return;
+    }
+
+    closeList();
+    const paragraph = document.createElement("p");
+    appendInlineMarkup(paragraph, line);
+    container.appendChild(paragraph);
+  });
+
+  closeList();
+  if (fence) container.appendChild(fence);
+}
 
 function formatStatusTime(value) {
   if (!value) return "";

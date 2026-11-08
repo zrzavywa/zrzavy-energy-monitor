@@ -8,6 +8,25 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.8.2] — 2026-11-08
+
+### Geändert
+
+- Die Release-Notes auf der Update-Seite werden als Formatierung dargestellt
+  statt als Rohtext: Überschriften, Aufzählungen, Inline-Code und Codeblöcke.
+  Die Notes stammen aus einem GitHub-Release und gelten als nicht vertrauenswürdig;
+  die Seite baut deshalb ausschließlich DOM-Knoten mit `textContent`, ohne
+  `innerHTML`, und macht nur `https`-Adressen zu Links.
+- Hart umbrochene Notes bleiben in einem Aufzählungspunkt, Codeblöcke behalten
+  ihre Zeilen. Das Containerelement der Notes ist jetzt ein `div` statt `pre`,
+  weil ein `pre` keine Überschriften und Listen halten kann.
+
+### Behoben
+
+- Ohne Statusdatei meldete `/api/update/status` `status_is_historic: true`,
+  weil die fehlende gespeicherte Version als abweichende Version galt. Es gibt
+  dann keinen Vorgang; das Feld ist jetzt `false`.
+
 ## [4.8.1] — 2026-11-08
 
 ### Behoben

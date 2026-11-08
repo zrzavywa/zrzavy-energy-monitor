@@ -294,10 +294,50 @@ code { background: #e7ecea; border-radius: 6px; padding: 3px 6px; }
 }
 
 .release-notes {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   max-height: 24rem;
   overflow-y: auto;
+}
+
+.release-notes > :first-child {
+  margin-top: 0;
+}
+
+.release-notes h3,
+.release-notes h4,
+.release-notes h5 {
+  margin: 1rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.release-notes p {
+  margin: 0.5rem 0;
+}
+
+.release-notes ul {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.release-notes li {
+  margin: 0.2rem 0;
+}
+
+.release-notes code {
+  font-size: 0.9em;
+}
+
+.release-notes pre {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  background: #f5f8f6;
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  font-size: 0.85em;
+}
+
+.release-notes pre code {
+  font-size: inherit;
 }
 
 .error-card {

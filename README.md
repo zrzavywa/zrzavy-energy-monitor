@@ -8,7 +8,7 @@
 
 > Open-source home energy monitoring and validation
 
-> Dokumentationsstand: Zrzavy Energy Monitor **4.8.1**
+> Dokumentationsstand: Zrzavy Energy Monitor **4.8.2**
 > Primärplattform: Raspberry Pi OS beziehungsweise Debian-basierte Linux-Systeme
 
 ## Hauptfunktionen
@@ -151,6 +151,8 @@ Weitere Informationen enthält die Datei [TRADEMARKS.md](TRADEMARKS.md).
 Die geltende Lizenz ergibt sich aus der Datei `LICENSE` im Repository.
 
 ## Dokument-Change-Log
+
+- 2026-11-08 — Produktstand auf 4.8.2 gehoben; Anlass/Quelle: Release-Notes werden formatiert dargestellt, Statusanzeige ohne Statusdatei korrigiert; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 
 - 2026-11-08 — Produktstand auf 4.8.1 gehoben; Anlass/Quelle: Update-Seite zeigt einen alten Vorgang nicht mehr als Ergebnis der laufenden Installation; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 

@@ -279,6 +279,24 @@ startete der Host neu. Der Dienst kam beim Booten automatisch wieder hoch.
 Bei Fehlschlag genügt es, den Symlink auf das vorherige Release zurückzusetzen
 und den Dienst neu zu starten; die Datenbank bleibt unberührt.
 
+### Update-Status nach einem manuellen Release
+
+Die Statusdatei `update-status.json` wird ausschließlich vom privilegierten
+Updater geschrieben. Ein manuell eingespieltes Release lässt sie unverändert
+stehen; sie beschreibt dann einen früheren Vorgang. Die Update-Seite zeigt das
+seit 4.8.1 als „älterer Vorgang“ und behauptet nicht mehr, die laufende Version
+sei daraus entstanden.
+
+Für eine leere Statusanzeige den Altstand archivieren statt löschen:
+
+```bash
+sudo mv /var/lib/zrzavy-energy-monitor/update-status.json \
+        /var/lib/zrzavy-energy-monitor/update-status.json.stale-<datum>
+```
+
+Danach liefert `/api/update/status` Idle-Defaults. Am 2026-11-08 wurde ein
+Datensatz vom 2026-07-29 so archiviert.
+
 ## Regelmäßige Betriebsprüfung
 
 Empfohlen mindestens monatlich:
@@ -342,6 +360,8 @@ zwei Seiten (Monat: 31 Tabellenzeilen). Seitenzahlen druckt nur der Browser
 selbst, nicht die Anwendung.
 
 ## Dokument-Change-Log
+
+- 2026-11-08 — Abschnitt „Update-Status nach einem manuellen Release“ ergänzt; Anlass/Quelle: manuelle Deployments schreiben die Statusdatei nicht fort, am 2026-11-08 wurde ein Altstand vom 2026-07-29 archiviert; Prüfstatus: gegen die laufende Installation 4.8.1 geprüft (Datei umbenannt, Dienst aktiv, API liefert Idle-Defaults).
 
 - 2026-11-08 — Wertetabelle um Eigenverbrauchsquote und Autarkiegrad je Zeile ergänzt, Spaltenübersicht, Gedankenstrich-Regel und Summenzeilen-Logik dokumentiert; Anlass/Quelle: Betreiberanforderung Quoten je Zeile auch im Ausdruck; Prüfstatus: Umsetzung und Tests abgeglichen, Ausdruck mit Headless-Chromium bei 703 px gemessen (Tabelle 669 px im Container, kein Abschnitt), `./scripts/verify.sh` PASS.
 - 2026-11-08 — Abschnitt „Ausdruck der Periodenübersicht“ mit Druckumfang, Zeitangaben und Chrome-Einstellungen ergänzt; Anlass/Quelle: Betreiberanforderung Druck der Periodenübersicht (4.7.0); Prüfstatus: Umsetzung und Tests abgeglichen, Sichtprüfung im Browser steht aus.
