@@ -8,6 +8,20 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.7.1] — 2026-11-08
+
+### Behoben
+
+- Der Ausdruck zeigte kein Diagramm. Das Druckbild wird jetzt zusammen mit den
+  Daten vorbereitet und nicht erst im `beforeprint`; ein Bild aus einer
+  Daten-URL wird asynchron dekodiert und war in der Druckvorschau deshalb oft
+  noch leer. Fehlt das Bild, druckt die Seite ersatzweise das Canvas.
+- Die Wertetabelle lief rechts über die Seite und wurde am Papierrand
+  abgeschnitten, sobald die Systemschrift breitere Zeichen lieferte. Die
+  Tabelle hat jetzt feste Spaltenbreiten (`table-layout: fixed`), lange
+  Spaltenköpfe umbrechen statt zu verbreitern. Die Kennzahlenzeile nutzt
+  `minmax(0, 1fr)`, damit lange Beschriftungen das Raster nicht aufziehen.
+
 ## [4.7.0] — 2026-11-08
 
 ### Hinzugefügt

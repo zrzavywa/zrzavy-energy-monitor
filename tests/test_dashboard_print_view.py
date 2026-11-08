@@ -75,6 +75,8 @@ def test_print_rules_keep_the_complete_value_table() -> None:
     assert "position: static" in print_block
     assert "break-inside: avoid" in print_block
     assert "body.is-loading .values-panel" in print_block
+    assert "table-layout: fixed" in print_block
+    assert "display: table-header-group" in print_block
 
 
 def test_print_page_is_a4_and_hides_non_report_sections() -> None:
@@ -85,6 +87,8 @@ def test_print_page_is_a4_and_hides_non_report_sections() -> None:
     print_block = _css_block(css, "@media print")
     assert "main > section:not(.print-report)" in print_block
     assert "print-color-adjust: exact" in print_block
+    assert "repeat(3, minmax(0, 1fr))" in print_block
+    assert "body:not(.has-print-chart)" in print_block
 
 
 def test_dashboard_script_prepares_the_print_report() -> None:
@@ -96,3 +100,5 @@ def test_dashboard_script_prepares_the_print_report() -> None:
     assert 'toDataURL("image/png")' in script
     assert "PRINT_CHART_PIXEL_RATIO" in script
     assert "toLocaleDateString" in script
+    assert "refreshPrintChart()" in script
+    assert "has-print-chart" in script

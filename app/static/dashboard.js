@@ -199,6 +199,7 @@ function renderDashboard() {
   drawChart();
   renderValueTable();
   updatePrintAvailability();
+  refreshPrintChart();
 }
 
 function setText(id, value, digits = 0) {
@@ -662,6 +663,27 @@ function buildPrintChartImage() {
   return canvas.toDataURL("image/png");
 }
 
+// The print image is prepared whenever the data is rendered, not inside
+// beforeprint: a data URL image decodes asynchronously, so an image assigned
+// directly before printing can still be empty in the print preview.
+function refreshPrintChart() {
+  const image = document.getElementById("print-energy-chart");
+  if (!image) return;
+  let source = "";
+  try {
+    source = buildPrintChartImage();
+  } catch (error) {
+    source = "";
+  }
+  if (source) {
+    image.src = source;
+    document.body.classList.add("has-print-chart");
+    return;
+  }
+  image.removeAttribute("src");
+  document.body.classList.remove("has-print-chart");
+}
+
 function updatePrintAvailability() {
   if (!printButton) return;
   printButton.disabled = !state.dashboard;
@@ -672,13 +694,7 @@ function preparePrint() {
   const stamp = document.getElementById("print-stamp");
   if (stamp) stamp.textContent = `Ausdruck: ${formatDateTime(new Date())}`;
   const image = document.getElementById("print-energy-chart");
-  if (!image) return;
-  const source = buildPrintChartImage();
-  if (source) {
-    image.src = source;
-  } else {
-    image.removeAttribute("src");
-  }
+  if (image && !image.getAttribute("src")) refreshPrintChart();
 }
 
 function clearPrint() {

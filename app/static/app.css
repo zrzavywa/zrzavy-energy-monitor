@@ -641,6 +641,11 @@ body.is-loading .chart-panel {
     break-inside: avoid;
   }
 
+  /* Etwas mehr Innenbreite für die Tabelle, ohne die Seite zu verlassen. */
+  .panel {
+    padding: 14px 16px;
+  }
+
   /* Das Diagramm wird als vorab gerendertes Bild gedruckt, nicht als Canvas. */
   .chart-wrap {
     min-height: 0;
@@ -654,6 +659,16 @@ body.is-loading .chart-panel {
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  /* Rueckfallebene: Steht kein vorbereitetes Bild bereit, wird das Canvas
+     gedruckt — unscharf, aber vorhanden, statt einer leeren Flaeche. */
+  body:not(.has-print-chart) #energy-chart {
+    display: block;
+  }
+
+  body:not(.has-print-chart) .print-chart {
+    display: none;
   }
 
   .chart-empty {
@@ -679,6 +694,13 @@ body.is-loading .chart-panel {
 
   .values-table thead th {
     position: static;
+    /* Lange Spaltenköpfe umbrechen, statt die Tabelle zu verbreitern. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    letter-spacing: 0;
+    line-height: 1.25;
+    font-size: 8pt;
+    padding: 5px 6px;
   }
 
   .values-table tfoot {
@@ -687,8 +709,39 @@ body.is-loading .chart-panel {
 
   .values-table th,
   .values-table td {
-    padding: 5px 8px;
-    font-size: 10pt;
+    padding: 4px 6px;
+    font-size: 9.5pt;
+  }
+
+  /* Feste Spaltenbreiten: Die Tabelle kann damit unabhaengig von den
+     Schriftmetriken des Systems nicht breiter als ihr Container werden. */
+  .values-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .values-table th:nth-child(1) {
+    width: 12%;
+  }
+
+  .values-table th:nth-child(2) {
+    width: 15%;
+  }
+
+  .values-table th:nth-child(3) {
+    width: 21%;
+  }
+
+  .values-table th:nth-child(4) {
+    width: 17%;
+  }
+
+  .values-table th:nth-child(5) {
+    width: 15%;
+  }
+
+  .values-table th:nth-child(6) {
+    width: 20%;
   }
 
   .values-table tr {
@@ -699,13 +752,19 @@ body.is-loading .chart-panel {
     background: transparent;
   }
 
+  /* minmax(0, 1fr): lange Beschriftungen duerfen das Raster nicht aufziehen. */
   .kpi-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6mm;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4mm;
   }
 
   .kpi-card {
+    min-width: 0;
     padding: 5mm;
+  }
+
+  .kpi-card span {
+    overflow-wrap: anywhere;
   }
 
   .kpi-card strong {
