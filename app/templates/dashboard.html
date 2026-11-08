@@ -19,6 +19,8 @@
       <button id="today-period">Heute</button>
       <button id="next-period" title="Nächster Zeitraum">→</button>
     </div>
+    <button id="print-dashboard" type="button" class="button secondary print-button"
+            title="Aktuelle Periode drucken">Drucken</button>
   </div>
 </section>
 
@@ -208,12 +210,13 @@
   </div>
 </section>
 
-<section class="panel chart-panel">
+<section class="panel chart-panel print-report">
   <div class="panel-head">
     <div>
       <p class="eyebrow">ENERGIE</p>
       <h2 id="period-title">Aktueller Tag</h2>
       <p class="updated-hint" id="last-updated" aria-live="off"></p>
+      <span class="print-only print-stamp" id="print-stamp"></span>
     </div>
     <div class="legend">
       <span><i class="legend-solar"></i>Erzeugung</span>
@@ -224,11 +227,12 @@
   </div>
   <div class="chart-wrap">
     <canvas id="energy-chart" height="340"></canvas>
+    <img id="print-energy-chart" class="print-chart" alt="">
     <div id="chart-empty" class="chart-empty">Für diesen Zeitraum sind noch keine Energiedaten vorhanden.</div>
   </div>
 </section>
 
-<section class="panel values-panel">
+<section class="panel values-panel print-report">
   <div class="panel-head">
     <div>
       <p class="eyebrow">WERTE</p>
@@ -256,7 +260,7 @@
   </div>
 </section>
 
-<section class="kpi-grid">
+<section class="kpi-grid print-report">
   <article class="kpi-card"><span>Ausgewählter Ertrag</span><strong id="kpi-solar">0,000 kWh</strong></article>
   <article class="kpi-card"><span>Hausverbrauch</span><strong id="kpi-house">0,000 kWh</strong></article>
   <article class="kpi-card"><span>Netzbezug</span><strong id="kpi-import">0,000 kWh</strong></article>

@@ -588,3 +588,142 @@ body.is-loading .chart-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Ausdruck: Nur Energie-Diagramm, Wertetabelle und Kennzahlen werden gedruckt.
+   Alle Live-Panels bleiben auf dem Bildschirm. */
+@page {
+  size: A4;
+  margin: 12mm 12mm 14mm;
+}
+
+@media screen {
+  .print-only,
+  .print-chart {
+    display: none;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff;
+    color: #111;
+  }
+
+  main {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+
+  .topbar,
+  footer,
+  main > p,
+  main > .flash,
+  main > section:not(.print-report) {
+    display: none !important;
+  }
+
+  .print-report {
+    margin-bottom: 8mm;
+  }
+
+  /* Ein Druck während eines laufenden Refreshs darf nicht abgeblendet werden. */
+  body.is-loading .chart-panel,
+  body.is-loading .values-panel {
+    opacity: 1;
+  }
+
+  .panel,
+  .kpi-grid {
+    box-shadow: none;
+    border: 1px solid #c9d4cf;
+    break-inside: avoid;
+  }
+
+  /* Das Diagramm wird als vorab gerendertes Bild gedruckt, nicht als Canvas. */
+  .chart-wrap {
+    min-height: 0;
+  }
+
+  #energy-chart {
+    display: none;
+  }
+
+  .print-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .chart-empty {
+    position: static;
+    padding: 10px 0;
+  }
+
+  /* Die Wertetabelle muss vollständig erscheinen. Der Bildschirm begrenzt sie
+     auf 420 Pixel Höhe und fixiert den Kopf; beides würde die Monatsansicht
+     nach etwa zwölf Zeilen abschneiden. */
+  .values-panel {
+    break-inside: auto;
+  }
+
+  .values-table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .values-table thead {
+    display: table-header-group;
+  }
+
+  .values-table thead th {
+    position: static;
+  }
+
+  .values-table tfoot {
+    display: table-row-group;
+  }
+
+  .values-table th,
+  .values-table td {
+    padding: 5px 8px;
+    font-size: 10pt;
+  }
+
+  .values-table tr {
+    break-inside: avoid;
+  }
+
+  .values-table tbody tr:hover {
+    background: transparent;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6mm;
+  }
+
+  .kpi-card {
+    padding: 5mm;
+  }
+
+  .kpi-card strong {
+    font-size: 14pt;
+  }
+
+  .print-stamp {
+    display: block;
+    font-size: 9pt;
+    color: #333;
+  }
+
+  .updated-hint {
+    color: #333;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

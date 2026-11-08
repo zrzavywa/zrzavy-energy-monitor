@@ -8,6 +8,24 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.7.0] — 2026-11-08
+
+### Hinzugefügt
+
+- Dashboard: Die Schaltfläche „Drucken“ gibt die gewählte Periode als
+  druckfertige Seite aus. Gedruckt werden Periodentitel mit Datenstand, das
+  Energie-Diagramm als vorab gerendertes Bild, die vollständige Wertetabelle
+  mit Summenzeile und die Kennzahlenzeile. Live-, Bilanz-, Validierungs-,
+  Zähler-, Phasen- und Solakon-Panels bleiben dem Bildschirm vorbehalten.
+- Im Ausdruck stehen Datenstand („Stand“) und Erzeugungszeitpunkt
+  („Ausdruck“) getrennt, damit ein später gedruckter Bericht kein frischeres
+  Datum vortäuscht.
+
+### Geändert
+
+- Keine Änderung an der API: der Ausdruck nutzt die bereits gelieferten
+  Felder von `/api/dashboard`.
+
 ## [4.6.4] — 2026-11-07
 
 ### Betrieb

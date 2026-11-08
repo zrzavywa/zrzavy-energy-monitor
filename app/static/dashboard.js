@@ -13,6 +13,11 @@ const state = {
 };
 const anchorInput = document.getElementById("anchor-date");
 anchorInput.value = state.anchor;
+const printButton = document.getElementById("print-dashboard");
+if (printButton) {
+  printButton.disabled = true;
+  printButton.addEventListener("click", () => window.print());
+}
 
 const formatNumber = (value, digits = 0) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "–";
@@ -127,7 +132,7 @@ function startLoading() {
 function showUpdatedAt() {
   const hint = document.getElementById("last-updated");
   if (!hint) return;
-  hint.textContent = `Stand ${new Date().toLocaleTimeString("de-DE")}`;
+  hint.textContent = `Stand ${formatDateTime(new Date())}`;
 }
 
 function stopLoading() {
@@ -193,6 +198,7 @@ function renderDashboard() {
   document.getElementById("kpi-grid-source").textContent = k.grid_source || "–";
   drawChart();
   renderValueTable();
+  updatePrintAvailability();
 }
 
 function setText(id, value, digits = 0) {
@@ -521,11 +527,30 @@ function drawPhaseChart() {
   ctx.restore();
 }
 
-function drawChart() {
-  const canvas = document.getElementById("energy-chart");
-  const empty = document.getElementById("chart-empty");
+const ENERGY_CHART_HEIGHT = 340;
+// An A4 print area is about 700 CSS pixels wide at 96 dpi. The print image is
+// drawn three times as wide and scaled down by CSS, which lands near 300 dpi on
+// paper instead of the blurry bitmap a scaled screen canvas would produce.
+const PRINT_CHART_WIDTH = 700;
+const PRINT_CHART_PIXEL_RATIO = 3;
+
+function prepareCanvas(canvas, cssWidth, cssHeight, pixelRatio) {
+  canvas.width = Math.floor(cssWidth * pixelRatio);
+  canvas.height = Math.floor(cssHeight * pixelRatio);
+  canvas.style.width = cssWidth + "px";
+  canvas.style.height = cssHeight + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(pixelRatio, pixelRatio);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  return ctx;
+}
+
+function drawChart(canvas = document.getElementById("energy-chart"), options = {}) {
   const data = state.dashboard;
   if (!data) return;
+  const cssWidth = options.width || canvas.parentElement.clientWidth;
+  const cssHeight = ENERGY_CHART_HEIGHT;
+  const pixelRatio = options.pixelRatio || window.devicePixelRatio || 1;
   const all = [
     ...data.series.solar_kwh,
     ...data.series.house_kwh,
@@ -533,18 +558,11 @@ function drawChart() {
     ...data.series.feed_in_kwh
   ];
   const maxValue = Math.max(...all, 0);
-  empty.style.display = maxValue <= 0 ? "grid" : "none";
-
-  const dpr = window.devicePixelRatio || 1;
-  const cssWidth = canvas.parentElement.clientWidth;
-  const cssHeight = 340;
-  canvas.width = Math.floor(cssWidth * dpr);
-  canvas.height = Math.floor(cssHeight * dpr);
-  canvas.style.width = cssWidth + "px";
-  canvas.style.height = cssHeight + "px";
-  const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  if (!options.width) {
+    const empty = document.getElementById("chart-empty");
+    empty.style.display = maxValue <= 0 ? "grid" : "none";
+  }
+  const ctx = prepareCanvas(canvas, cssWidth, cssHeight, pixelRatio);
 
   const margin = {left: 55, right: 18, top: 15, bottom: 48};
   const width = cssWidth - margin.left - margin.right;
@@ -628,6 +646,49 @@ function roundedRect(ctx, x, y, width, height, radius) {
   ctx.arcTo(x, y, x + width, y, radius);
   ctx.closePath();
 }
+
+// The print report reuses the screen chart data and renders it once into a
+// high-resolution image. Browsers do not repaint canvases reliably for the print
+// preview, and a scaled screen bitmap would be visibly blurry on paper.
+function formatDateTime(date) {
+  const day = date.toLocaleDateString("de-DE", {day: "2-digit", month: "2-digit", year: "numeric"});
+  return `${day}, ${date.toLocaleTimeString("de-DE", {hour12: false})}`;
+}
+
+function buildPrintChartImage() {
+  if (!state.dashboard) return "";
+  const canvas = document.createElement("canvas");
+  drawChart(canvas, {width: PRINT_CHART_WIDTH, pixelRatio: PRINT_CHART_PIXEL_RATIO});
+  return canvas.toDataURL("image/png");
+}
+
+function updatePrintAvailability() {
+  if (!printButton) return;
+  printButton.disabled = !state.dashboard;
+}
+
+function preparePrint() {
+  document.body.classList.add("is-printing");
+  const stamp = document.getElementById("print-stamp");
+  if (stamp) stamp.textContent = `Ausdruck: ${formatDateTime(new Date())}`;
+  const image = document.getElementById("print-energy-chart");
+  if (!image) return;
+  const source = buildPrintChartImage();
+  if (source) {
+    image.src = source;
+  } else {
+    image.removeAttribute("src");
+  }
+}
+
+function clearPrint() {
+  document.body.classList.remove("is-printing");
+  const image = document.getElementById("print-energy-chart");
+  if (image) image.removeAttribute("src");
+}
+
+window.addEventListener("beforeprint", preparePrint);
+window.addEventListener("afterprint", clearPrint);
 
 window.addEventListener("resize", () => {
   if (state.dashboard) drawChart();

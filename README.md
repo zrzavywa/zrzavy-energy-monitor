@@ -8,7 +8,7 @@
 
 > Open-source home energy monitoring and validation
 
-> Dokumentationsstand: Zrzavy Energy Monitor **4.6.4**
+> Dokumentationsstand: Zrzavy Energy Monitor **4.7.0**
 > Primärplattform: Raspberry Pi OS beziehungsweise Debian-basierte Linux-Systeme
 
 ## Hauptfunktionen
@@ -20,6 +20,7 @@
 - Berechnung von Hausverbrauch, Eigenverbrauch, Autarkie sowie Netzbezug und Einspeisung
 - Speicherung der Messwerte in einer lokalen SQLite-Datenbank
 - CSV-Export und Diagnosefunktionen
+- Druckfertige Tages-, Wochen-, Monats- und Jahresübersicht als Papierausdruck oder PDF
 - GitHub-basierte Updates mit Prüfsumme, Backup, Healthcheck und Rollback
 
 ## Unterstützte Messquellen
@@ -151,4 +152,5 @@ Die geltende Lizenz ergibt sich aus der Datei `LICENSE` im Repository.
 
 ## Dokument-Change-Log
 
+- 2026-11-08 — Druckfunktion der Periodenübersicht in den Hauptfunktionen ergänzt; Anlass/Quelle: Betreiberanforderung Ausdruck der Tages-, Wochen-, Monats- und Jahresübersicht; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 - 2026-11-07 — Funktionsumfang um Monatsauswertung ergänzt; Anlass/Quelle: Betreiberanforderung Monatsauswahl im Dashboard; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.

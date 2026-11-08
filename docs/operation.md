@@ -293,7 +293,43 @@ Empfohlen mindestens monatlich:
 - Update-Status enthält keinen dauerhaften Fehler.
 - Raspberry Pi und Abhängigkeiten erhalten Sicherheitsupdates.
 
+## Ausdruck der Periodenübersicht
+
+Das Dashboard hat neben der Periodenauswahl die Schaltfläche **Drucken**. Sie
+gibt die aktuell gewählte Periode (Tag, Woche, Monat, Jahr) so aus, wie sie
+gerade angezeigt wird — mit den geladenen Zahlen, ohne neue Abfrage.
+
+Gedruckt werden:
+
+- Kopf mit Periodentitel, Datenstand und Erzeugungszeitpunkt,
+- das Energie-Diagramm (Erzeugung, Hausverbrauch, Netzbezug, Einspeisung),
+- die vollständige Wertetabelle des Zeitraums mit Summenzeile,
+- die Kennzahlenzeile (Ertrag, Hausverbrauch, Netzbezug, Einspeisung,
+  Eigenverbrauchsquote, Autarkiegrad).
+
+Nicht gedruckt werden Live-Karten, Momentan-Energiebilanz,
+Plausibilitätsprüfung, Netzstromzähler, Phasen- und Solakon-Panel sowie
+Navigation und Seitenfuß.
+
+**Zeitangaben:** „Stand“ ist der Zeitpunkt, an dem die angezeigten Zahlen
+geladen wurden. „Ausdruck“ ist der Zeitpunkt des Druckbefehls. Bei einer
+laufenden Periode liegen beide höchstens eine Minute auseinander; bei einer
+abgeschlossenen Periode bleibt „Stand“ der ältere, ehrlichere Wert.
+
+**Einstellungen im Browser (Chrome):**
+
+1. „Hintergrundgrafiken“ aktivieren, sonst drucken Legende, Balken und die
+   hervorgehobenen Kennzahlen ohne Farbe.
+2. „Kopf- und Fußzeilen“ deaktivieren, sonst erscheinen URL und Datum des
+   Browsers am Seitenrand.
+3. Für ein PDF „Als PDF speichern“ als Ziel wählen; der Text bleibt auswählbar.
+
+Der Ausdruck umfasst je nach Periode etwa eine Seite (Tag, Woche, Jahr) oder
+zwei Seiten (Monat: 31 Tabellenzeilen). Seitenzahlen druckt nur der Browser
+selbst, nicht die Anwendung.
+
 ## Dokument-Change-Log
 
+- 2026-11-08 — Abschnitt „Ausdruck der Periodenübersicht“ mit Druckumfang, Zeitangaben und Chrome-Einstellungen ergänzt; Anlass/Quelle: Betreiberanforderung Druck der Periodenübersicht (4.7.0); Prüfstatus: Umsetzung und Tests abgeglichen, Sichtprüfung im Browser steht aus.
 - 2026-11-07 — Abschnitte „Aufbewahrung und Aufräumen der Rohdaten“, „Abgebrochener Wartungsversuch am 2026-11-07“ und „Release einspielen“ ergänzt; Anlass/Quelle: Retention-Befehl ab 4.6.1, abgebrochenes Aufräumfenster und fehlende `.venv` beim Deployment von 4.6.1; Prüfstatus: Befehle auf der Referenzinstallation ausgeführt (Dry Run), Deployment-Schritte am 2026-11-07 zweimal durchlaufen.
 - 2026-11-07 — Abschnitt „Wartungsfenster für die Datenbank" mit gemessenen Wartezeiten und Abbruchregeln ergänzt; Anlass/Quelle: Wartungsversuch auf der Referenzinstallation (6 GB, USB, `quick_check` > 25 min); Prüfstatus: Messwerte aus dem Betriebsprotokoll, Vorgehen angewandt und dokumentiert.
