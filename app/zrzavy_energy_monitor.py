@@ -121,6 +121,7 @@ from zrzavy_energy_monitor_core.web.api import (
     build_collect_once_api_response,
     build_dashboard_api_response,
     build_delete_all_api_response,
+    build_devices_availability_api_response,
     build_health_api_response,
     build_live_api_response,
     build_phase_dashboard_api_response,
@@ -466,6 +467,20 @@ def api_validation_summary():
             hours_value=request.args.get("hours", "24"),
             recent_limit_value=request.args.get("limit", "8"),
             now_epoch=time.time(),
+        )
+    )
+
+
+@app.get("/api/devices/availability")
+def api_devices_availability():
+    """api_devices_availability handles the associated HTTP route and delegates application work to the corresponding service."""
+    active_config = config_manager.get()
+    return jsonify(
+        build_devices_availability_api_response(
+            database,
+            build_device_cards(active_config, DEVICE_TYPES),
+            request.args.get("period", "day"),
+            request.args.get("anchor"),
         )
     )
 

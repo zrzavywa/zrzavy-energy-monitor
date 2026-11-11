@@ -857,10 +857,23 @@ class Collector:
             if str(house_cfg.get("type")) in _MULTI_PHASE_SHELLY_TYPES
             else None
         )
+        # Every device the collector actually read contributes one
+        # availability observation per cycle, including offline devices.
+        availability_snapshots = tuple(
+            snapshot
+            for snapshot in (
+                grid_meter_snapshot,
+                house_snapshot,
+                solar_snapshot,
+                solakon_snapshot,
+            )
+            if snapshot is not None
+        )
         sample_id = self._insert_sample(
             sample,
             phase_snapshot=phase_snapshot,
             grid_meter_snapshot=(grid_meter_persistence_snapshot),
+            availability_snapshots=availability_snapshots,
             measurement_snapshots=validated_cycle.snapshots,
             energy_balance=cycle_energy_balance,
             persist_source_decisions=bool(
@@ -910,6 +923,7 @@ class Collector:
         persist_source_decisions: bool,
         measurement_role: str,
         measurement_snapshots: tuple[DeviceSnapshot, ...] = (),
+        availability_snapshots: tuple[DeviceSnapshot, ...] = (),
     ) -> int:
         """Persist normalized details with test-double support."""
 
@@ -925,6 +939,7 @@ class Collector:
                     phase_snapshot=phase_snapshot,
                     grid_meter_snapshot=grid_meter_snapshot,
                     measurement_snapshots=measurement_snapshots,
+                    availability_snapshots=availability_snapshots,
                     measurement_role=measurement_role,
                     energy_balance=energy_balance,
                     persist_source_decisions=persist_source_decisions,

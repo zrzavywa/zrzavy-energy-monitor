@@ -359,7 +359,41 @@ Der Ausdruck umfasst je nach Periode etwa eine Seite (Tag, Woche, Jahr) oder
 zwei Seiten (Monat: 31 Tabellenzeilen). Seitenzahlen druckt nur der Browser
 selbst, nicht die Anwendung.
 
+## Erreichbarkeits-Zeitreihe prüfen
+
+Seit 4.10.0 führt die Anwendung je Gerät stündliche Erreichbarkeitszähler in
+`device_availability_hours` (Schema-Version 3). Die Tabelle hängt bewusst
+nicht an `samples` und überlebt damit die Aufbewahrungsfrist der Rohdaten;
+Standard sind 400 Tage (`persistence.retention.availability_days`).
+
+Stündliche Zähler eines Tages prüfen:
+
+```bash
+sudo /opt/zrzavy-energy-monitor/current/.venv/bin/python - <<'PY'
+import sqlite3
+db = sqlite3.connect("/var/lib/zrzavy-energy-monitor/zrzavy-energy-monitor.db")
+for row in db.execute(
+    "SELECT source_id, COUNT(*), SUM(observation_count) "
+    "FROM device_availability_hours GROUP BY source_id"
+):
+    print(row)
+PY
+```
+
+Historie einmalig aus vorhandenen Messzeilen ableiten (ohne `--apply` nur
+zählen, der Lauf ist idempotent):
+
+```bash
+sudo /opt/zrzavy-energy-monitor/current/.venv/bin/python \
+  /opt/zrzavy-energy-monitor/current/scripts/backfill-availability.py --days 30
+```
+
+Abgeleitete Stunden tragen `origin='derived'` und erscheinen im Endpunkt als
+`coverage: "derived"`. Sie überschreiben keine erfassten Stunden.
+
 ## Dokument-Change-Log
+
+- 2026-11-11 — Abschnitt „Erreichbarkeits-Zeitreihe prüfen" ergänzt; Anlass/Quelle: Schema 3 mit `device_availability_hours` und Nachladebefehl in 4.10.0; Prüfstatus: Migration und Nachladen auf der Referenzinstallation ausgeführt, Zählerstände geprüft.
 
 - 2026-11-08 — Abschnitt „Update-Status nach einem manuellen Release“ ergänzt; Anlass/Quelle: manuelle Deployments schreiben die Statusdatei nicht fort, am 2026-11-08 wurde ein Altstand vom 2026-07-29 archiviert; Prüfstatus: gegen die laufende Installation 4.8.1 geprüft (Datei umbenannt, Dienst aktiv, API liefert Idle-Defaults).
 

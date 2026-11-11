@@ -58,7 +58,7 @@ def test_api_inventory_excludes_derived_and_non_api_routes() -> None:
 
     contracts = _registered_api_contracts()
 
-    assert len(contracts) == 20
+    assert len(contracts) == 21
     assert all(method not in {"HEAD", "OPTIONS"} for method, _path in contracts)
     assert all(path.startswith("/api") for _method, path in contracts)
     assert ("GET", "/") not in contracts

@@ -52,8 +52,8 @@ def test_read_only_inspection_reports_integrity_plan_and_counts(
 
     assert inspection.integrity_check == "ok"
     assert inspection.current_schema_version == 0
-    assert inspection.target_schema_version == 2
-    assert [item.version for item in inspection.pending_migrations] == [1, 2]
+    assert inspection.target_schema_version == 3
+    assert [item.version for item in inspection.pending_migrations] == [1, 2, 3]
     assert inspection.table_counts == {"samples": 2}
     assert (_digest(database), database.stat().st_mtime_ns) == before
 
@@ -127,8 +127,8 @@ def test_dry_run_migrates_temporary_copy_without_touching_source(
 
     assert result.dry_run is True
     assert result.previous_schema_version == 0
-    assert result.target_schema_version == 2
-    assert [item.version for item in result.applied_migrations] == [1, 2]
+    assert result.target_schema_version == 3
+    assert [item.version for item in result.applied_migrations] == [1, 2, 3]
     assert result.integrity_check == "ok"
     assert result.backup_path is None
     assert (_digest(database), database.stat().st_mtime_ns) == before
@@ -150,10 +150,10 @@ def test_migration_creates_verified_backup_before_source_changes(
 
     assert notifications == [result.backup_path]
     assert result.backup_path is not None
-    assert [item.version for item in result.applied_migrations] == [1, 2]
+    assert [item.version for item in result.applied_migrations] == [1, 2, 3]
     assert result.integrity_check == "ok"
     with closing(sqlite3.connect(database)) as connection:
-        assert get_current_version(connection) == 2
+        assert get_current_version(connection) == 3
         assert connection.execute("SELECT COUNT(*) FROM samples").fetchone()[0] == 2
     with closing(sqlite3.connect(result.backup_path)) as connection:
         assert get_current_version(connection) == 0
@@ -212,7 +212,7 @@ def test_cli_info_dry_run_and_failure_exit_codes(
 
     assert main(["--database-info", "--database", str(database)]) == 0
     info = capsys.readouterr()
-    assert "Schema: 0; Ziel: 2; Migrationen: 1, 2" in info.out
+    assert "Schema: 0; Ziel: 3; Migrationen: 1, 2, 3" in info.out
     assert "Tabelle samples: 2" in info.out
 
     before = _digest(database)

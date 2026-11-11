@@ -205,7 +205,7 @@ def test_phase_09_fixture_can_be_stamped_without_domain_changes(
     finally:
         connection.close()
 
-    assert [migration.version for migration in applied] == [1, 2]
+    assert [migration.version for migration in applied] == [1, 2, 3]
     assert before_counts == after_counts == expected["row_counts"]
     assert integrity_result == "ok"
 
@@ -247,8 +247,8 @@ def test_legacy_fixture_migrates_without_inventing_values(
     finally:
         connection.close()
 
-    assert [migration.version for migration in applied] == [1, 2]
-    assert _get_current_version_from_path(tmp_path / "legacy_4_1.db") == 2
+    assert [migration.version for migration in applied] == [1, 2, 3]
+    assert _get_current_version_from_path(tmp_path / "legacy_4_1.db") == 3
     assert len(after_rows) == expected["row_counts"]["samples"]
     for before_row, after_row in zip(before_rows, after_rows, strict=True):
         assert tuple(after_row[:6]) == tuple(before_row)
@@ -260,6 +260,7 @@ def test_legacy_fixture_migrates_without_inventing_values(
     assert finding_count == 0
     assert integrity_result == "ok"
     assert migrated_tables == [
+        "device_availability_hours",
         "energy_balance_samples",
         "grid_meter_samples",
         "measurements",
@@ -406,12 +407,12 @@ def test_intermediate_fixture_migrates_idempotently_without_duplicate_rows(
     finally:
         connection.close()
 
-    assert [migration.version for migration in first_applied] == [1, 2]
+    assert [migration.version for migration in first_applied] == [1, 2, 3]
     assert second_applied == ()
     assert before_counts == after_counts == expected["row_counts"]
     assert migration_finding_count == 0
     assert integrity_result == "ok"
-    assert schema_version == 2
+    assert schema_version == 3
 
 
 def test_empty_database_fixture_has_no_application_objects(

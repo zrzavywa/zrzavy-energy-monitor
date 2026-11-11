@@ -203,6 +203,7 @@ def test_legacy_configuration_receives_disabled_retention_defaults(
         "raw_high_resolution_days": 30.0,
         "validation_events_days": 365.0,
         "source_selection_events_days": 90.0,
+        "availability_days": 400.0,
         "batch_rows": 1_000,
     }
 

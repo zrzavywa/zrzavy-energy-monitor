@@ -16,6 +16,9 @@ DEFAULT_RETENTION_CONFIG: Final[dict[str, object]] = {
     "raw_high_resolution_days": 30.0,
     "validation_events_days": 365.0,
     "source_selection_events_days": 90.0,
+    # The hourly availability counters are tiny, so they outlive the raw
+    # samples and keep a long-term reachability history.
+    "availability_days": 400.0,
     "batch_rows": DEFAULT_RETENTION_BATCH_ROWS,
 }
 
@@ -33,6 +36,8 @@ class RetentionPolicy:
         validation_events_days: Age of validation events in days, or ``None``.
         source_selection_events_days: Age of source decisions in days, or
             ``None``.
+        availability_days: Age of hourly availability counters in days, or
+            ``None``.
         batch_rows: Maximum rows deleted from each category per invocation.
 
     Raises:
@@ -43,6 +48,7 @@ class RetentionPolicy:
     raw_high_resolution_days: float | None = None
     validation_events_days: float | None = None
     source_selection_events_days: float | None = None
+    availability_days: float | None = None
     batch_rows: int = DEFAULT_RETENTION_BATCH_ROWS
 
     def __post_init__(self) -> None:
@@ -53,6 +59,7 @@ class RetentionPolicy:
                 "source_selection_events_days",
                 self.source_selection_events_days,
             ),
+            ("availability_days", self.availability_days),
         ):
             if value is not None and (
                 isinstance(value, bool) or not isinstance(value, (int, float))
@@ -104,6 +111,10 @@ class RetentionPolicy:
                 raw.get("source_selection_events_days"),
                 "source_selection_events_days",
             ),
+            availability_days=_optional_days(
+                raw.get("availability_days"),
+                "availability_days",
+            ),
             batch_rows=_batch_rows(raw.get("batch_rows")),
         )
 
@@ -115,6 +126,7 @@ class RetentionResult:
     raw_samples_deleted: int = 0
     validation_events_deleted: int = 0
     source_selection_events_deleted: int = 0
+    availability_hours_deleted: int = 0
 
     @property
     def total_deleted(self) -> int:
@@ -128,6 +140,7 @@ class RetentionResult:
             self.raw_samples_deleted
             + self.validation_events_deleted
             + self.source_selection_events_deleted
+            + self.availability_hours_deleted
         )
 
 
@@ -184,10 +197,16 @@ def apply_retention(
             policy=policy,
             reference_utc=reference_utc,
         )
+        availability_count = _delete_availability_hours(
+            connection,
+            policy=policy,
+            reference_utc=reference_utc,
+        )
         result = RetentionResult(
             raw_samples_deleted=sample_count,
             validation_events_deleted=validation_count,
             source_selection_events_deleted=selection_count,
+            availability_hours_deleted=availability_count,
         )
         connection.commit()
     except Exception:
@@ -196,10 +215,11 @@ def apply_retention(
 
     logger.info(
         "Phase 10 retention committed: raw_samples=%d validation_events=%d "
-        "source_selection_events=%d batch_rows=%d",
+        "source_selection_events=%d availability_hours=%d batch_rows=%d",
         result.raw_samples_deleted,
         result.validation_events_deleted,
         result.source_selection_events_deleted,
+        result.availability_hours_deleted,
         policy.batch_rows,
     )
     return result
@@ -224,6 +244,44 @@ def _delete_raw_samples(
             FROM samples
             WHERE ts_epoch < ?
             ORDER BY ts_epoch ASC
+            LIMIT ?
+        )
+        """,
+        (cutoff_epoch, policy.batch_rows),
+    )
+    return cursor.rowcount
+
+
+def _delete_availability_hours(
+    connection: sqlite3.Connection,
+    *,
+    policy: RetentionPolicy,
+    reference_utc: datetime,
+) -> int:
+    """Delete expired hourly availability counters in one bounded batch."""
+
+    if policy.availability_days is None:
+        return 0
+    row = connection.execute(
+        """
+        SELECT 1
+        FROM sqlite_schema
+        WHERE type = 'table' AND name = 'device_availability_hours'
+        """
+    ).fetchone()
+    if row is None:
+        return 0
+    cutoff_epoch = (
+        reference_utc - timedelta(days=policy.availability_days)
+    ).timestamp()
+    cursor = connection.execute(
+        """
+        DELETE FROM device_availability_hours
+        WHERE rowid IN (
+            SELECT rowid
+            FROM device_availability_hours
+            WHERE hour_start < ?
+            ORDER BY hour_start ASC
             LIMIT ?
         )
         """,

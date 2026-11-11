@@ -8,6 +8,42 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.10.0] — 2026-11-11
+
+### Neu
+
+- Die Seite „Datenerfassung" zeigt je konfiguriertem Gerät eine
+  Erreichbarkeits-Zeitreihe für 24 Stunden, 7 Tage und 30 Tage. Jeder Balken
+  steht für eine Stunde und ist nach erreichbar, erreichbar mit Einschränkung
+  und nicht erreichbar aufgeteilt; graue Abschnitte bedeuten, dass der
+  Sammler in dieser Stunde nichts geschrieben hat. Damit ist eine Lücke nicht
+  mehr von einem Ausfall zu unterscheiden — und muss es auch nicht sein.
+- Der Collector schreibt je Messzyklus und gelesenem Gerät einen Zähler in die
+  neue Tabelle `device_availability_hours` (Schema-Version 3). Die Tabelle
+  wächst mit Stunden statt mit Messzyklen, bleibt unabhängig von den
+  Rohdaten und überlebt deren Aufbewahrungsfrist.
+- Neuer Endpunkt `GET /api/devices/availability` mit `period` und `anchor`;
+  er liest nur die Stundenzähler und braucht deshalb auch für einen Monat
+  keine Rohdatenabfrage.
+- `scripts/backfill-availability.py` leitet die Historie einmalig aus
+  vorhandenen Messzeilen ab, kennzeichnet sie mit `origin='derived'` und
+  überschreibt niemals erfasste Stunden.
+- Neue Aufbewahrungskategorie `persistence.retention.availability_days` mit
+  Standard 400 Tagen.
+
+### Geändert
+
+- `degraded` gilt in der Zeitreihe als erreichbar. Eine dauerhafte Diagnose
+  (etwa fehlende Phasenwerte am Shelly) macht ein funktionierendes Gerät sonst
+  zum Dauerausfall; der Anteil wird getrennt als „mit Einschränkung"
+  ausgewiesen.
+
+### Betriebshinweis
+
+- Das Update auf 4.10.0 migriert das Schema 2 auf 3. Vor der Migration erstellt
+  die Anwendung ein verifiziertes Vollbackup der Datenbank; der Start dauert
+  dadurch länger und benötigt freien Platz in Größe der Datenbank.
+
 ## [4.9.0] — 2026-11-11
 
 ### Geändert

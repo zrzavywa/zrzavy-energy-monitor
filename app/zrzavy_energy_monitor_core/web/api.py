@@ -27,6 +27,9 @@ from zrzavy_energy_monitor_core.models.device import (
 )
 from zrzavy_energy_monitor_core.models.metrics import Metric
 from zrzavy_energy_monitor_core.persistence.database import Database
+from zrzavy_energy_monitor_core.services.availability import (
+    build_availability_api_response,
+)
 from zrzavy_energy_monitor_core.services.dashboard import build_dashboard
 from zrzavy_energy_monitor_core.services.periods import (
     bucket_index,
@@ -547,6 +550,26 @@ def build_phase_dashboard_api_response(
             "latest": _phase_api_row(latest_row),
         },
     }
+
+
+def build_devices_availability_api_response(
+    database: Any,
+    devices: list[dict[str, Any]],
+    period: str,
+    anchor_value: str | None,
+) -> dict[str, Any]:
+    """Aggregate device availability into period buckets.
+
+    Reads the hourly counter table only, so a month costs several hundred
+    rows per device instead of every raw sample of the period.
+    """
+
+    return build_availability_api_response(
+        database,
+        devices,
+        period,
+        anchor_value,
+    )
 
 
 def _phase_api_row(row: dict[str, Any] | None) -> dict[str, Any] | None:

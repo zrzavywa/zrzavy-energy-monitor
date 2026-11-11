@@ -28,6 +28,47 @@ from zrzavy_energy_monitor_core.models.source_selection import SourceSelectionRe
 # semantics while touching only this many sample rows.
 LATEST_SAMPLE_WINDOW: Final = 200
 
+AVAILABILITY_HOUR_SECONDS: Final = 3600
+
+AVAILABILITY_STATUS_COLUMNS: Final[dict[str, str]] = {
+    "online": "online_count",
+    "degraded": "degraded_count",
+    "offline": "offline_count",
+    "disabled": "disabled_count",
+    "unknown": "unknown_count",
+}
+
+AVAILABILITY_UPSERT_SQL: Final = """
+    INSERT INTO device_availability_hours (
+        source_id,
+        hour_start,
+        online_count,
+        degraded_count,
+        offline_count,
+        disabled_count,
+        unknown_count,
+        observation_count,
+        first_seen_epoch,
+        last_seen_epoch,
+        origin
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'recorded')
+    ON CONFLICT(source_id, hour_start) DO UPDATE SET
+        online_count = online_count + excluded.online_count,
+        degraded_count = degraded_count + excluded.degraded_count,
+        offline_count = offline_count + excluded.offline_count,
+        disabled_count = disabled_count + excluded.disabled_count,
+        unknown_count = unknown_count + excluded.unknown_count,
+        observation_count = observation_count + 1,
+        first_seen_epoch = MIN(
+            COALESCE(first_seen_epoch, excluded.first_seen_epoch),
+            COALESCE(excluded.first_seen_epoch, first_seen_epoch)
+        ),
+        last_seen_epoch = MAX(
+            COALESCE(last_seen_epoch, excluded.last_seen_epoch),
+            COALESCE(excluded.last_seen_epoch, last_seen_epoch)
+        )
+"""
+
 LATEST_GRID_METER_SQL: Final = """
     SELECT grid_meter_samples.*,
            recent.ts_epoch,
@@ -366,6 +407,7 @@ class Database:
         phase_snapshot: DeviceSnapshot | None = None,
         grid_meter_snapshot: DeviceSnapshot | None = None,
         measurement_snapshots: tuple[DeviceSnapshot, ...] = (),
+        availability_snapshots: tuple[DeviceSnapshot, ...] = (),
         *,
         measurement_role: str = "house_total",
         energy_balance: EnergyBalanceResult | None = None,
@@ -418,6 +460,15 @@ class Database:
                         sample_id=sample_id,
                         snapshots=measurement_snapshots,
                         energy_balance=energy_balance,
+                    )
+                if availability_snapshots and _table_exists(
+                    conn,
+                    "device_availability_hours",
+                ):
+                    self._upsert_availability(
+                        conn,
+                        snapshots=availability_snapshots,
+                        observed_epoch=float(sample.get("ts_epoch") or 0.0),
                     )
                 if (
                     energy_balance is not None
@@ -477,6 +528,95 @@ class Database:
             f"({','.join(columns)}) VALUES ({placeholders})",
             [row[column] for column in columns],
         )
+
+    def _upsert_availability(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        snapshots: tuple[DeviceSnapshot, ...],
+        observed_epoch: float,
+    ) -> None:
+        """Accumulate one availability observation per device and hour.
+
+        Each collection cycle adds exactly one observation to the hour bucket
+        of every device it read. The hourly table therefore grows with hours,
+        not with samples, and a month stays a few hundred rows per device.
+        """
+
+        if observed_epoch <= 0.0:
+            return
+        hour_start = int(observed_epoch // AVAILABILITY_HOUR_SECONDS) * (
+            AVAILABILITY_HOUR_SECONDS
+        )
+        for snapshot in snapshots:
+            counts = dict.fromkeys(AVAILABILITY_STATUS_COLUMNS.values(), 0)
+            column = AVAILABILITY_STATUS_COLUMNS.get(
+                snapshot.status.value,
+                "unknown_count",
+            )
+            counts[column] = 1
+            observed_at = snapshot.received_at.timestamp()
+            conn.execute(
+                AVAILABILITY_UPSERT_SQL,
+                (
+                    snapshot.source_id,
+                    hour_start,
+                    counts["online_count"],
+                    counts["degraded_count"],
+                    counts["offline_count"],
+                    counts["disabled_count"],
+                    counts["unknown_count"],
+                    observed_at,
+                    observed_at,
+                ),
+            )
+
+    def availability_hours_between(
+        self,
+        start_epoch: float,
+        end_epoch: float,
+        *,
+        source_ids: tuple[str, ...],
+    ) -> list[dict[str, Any]]:
+        """Return hourly availability counters for the given sources."""
+
+        if not source_ids:
+            return []
+        placeholders = ",".join("?" for _ in source_ids)
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT *
+                FROM device_availability_hours
+                WHERE hour_start >= ? AND hour_start < ?
+                  AND source_id IN ({placeholders})
+                ORDER BY source_id, hour_start
+                """,
+                (
+                    int(start_epoch // AVAILABILITY_HOUR_SECONDS)
+                    * AVAILABILITY_HOUR_SECONDS,
+                    int(end_epoch // AVAILABILITY_HOUR_SECONDS)
+                    * AVAILABILITY_HOUR_SECONDS,
+                    *source_ids,
+                ),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def availability_first_observed(self, source_id: str) -> float | None:
+        """Return the oldest recorded availability hour of one source."""
+
+        with self.connect() as conn:
+            row = conn.execute(
+                """
+                SELECT MIN(hour_start) AS first_hour
+                FROM device_availability_hours
+                WHERE source_id = ?
+                """,
+                (source_id,),
+            ).fetchone()
+        if row is None or row[0] is None:
+            return None
+        return float(row[0])
 
     def _insert_energy_balance(
         self,

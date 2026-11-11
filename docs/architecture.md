@@ -2,7 +2,7 @@
 
 ## Dokumentstatus und Geltungsbereich
 
-Dieses Dokument beschreibt den implementierten Stand von **Zrzavy Energy Monitor 4.9.0**. Repositorypfade ohne Präfix sind relativ zur Repositorywurzel. Pfade unter `/opt`, `/etc`, `/var/lib`, `/var/cache` und `/var/log` sind Deploymentpfade, keine Repositorypfade.
+Dieses Dokument beschreibt den implementierten Stand von **Zrzavy Energy Monitor 4.10.0**. Repositorypfade ohne Präfix sind relativ zur Repositorywurzel. Pfade unter `/opt`, `/etc`, `/var/lib`, `/var/cache` und `/var/log` sind Deploymentpfade, keine Repositorypfade.
 
 Die Abschnitte „Ist-Architektur 4.5“ und „Zielarchitektur 5.0 – geplant“ sind bewusst getrennt. MQTT, Home-Assistant-Discovery und eine versionierte externe API sind in 4.5 nicht implementiert.
 
@@ -44,7 +44,7 @@ Adapter liefern rollen- und einheitenbezogene normalisierte Snapshots. Die Valid
 
 ### Persistenz, Migrationen, Retention und Export
 
-`app/zrzavy_energy_monitor_core/persistence/database.py` und `app/zrzavy_energy_monitor_core/persistence/migrations.py` führen versionierte SQLite-Schema-Migrationen aus. Persistiert werden normalisierte Messwert-Zeitreihen, Phasenwerte, Energiebilanzen, Validierungsereignisse/Findings und – sofern aktiviert – Quellenentscheidungen. `app/zrzavy_energy_monitor_core/persistence/retention.py` implementiert eine standardmäßig deaktivierte, konfigurierbare und begrenzte Aufbewahrung; `app/zrzavy_energy_monitor_core/persistence/queries.py` bietet Zeitbereichsabfragen. `app/zrzavy_energy_monitor_core/web/export.py` stellt additive CSV-Exporte bereit. Das vollständige Schema steht in [docs/development/4.5/database-schema.md](development/4.5/database-schema.md).
+`app/zrzavy_energy_monitor_core/persistence/database.py` und `app/zrzavy_energy_monitor_core/persistence/migrations.py` führen versionierte SQLite-Schema-Migrationen aus. Persistiert werden normalisierte Messwert-Zeitreihen, Phasenwerte, Energiebilanzen, Validierungsereignisse/Findings, – sofern aktiviert – Quellenentscheidungen sowie seit Schema 3 stündliche Erreichbarkeitszähler (`device_availability_hours`). Die Erreichbarkeitszähler hängen bewusst nicht an `samples`: Sie wachsen mit Stunden statt mit Messzyklen (rund 35 000 Zeilen pro Jahr für vier Geräte), überleben das Löschen der Rohdaten und speisen die Zeitreihe der Seite „Datenerfassung". `app/zrzavy_energy_monitor_core/services/availability.py` faltet sie zu Perioden-Buckets, `app/zrzavy_energy_monitor_core/persistence/availability_backfill.py` leitet Historie einmalig aus vorhandenen Messzeilen ab. `app/zrzavy_energy_monitor_core/persistence/retention.py` implementiert eine standardmäßig deaktivierte, konfigurierbare und begrenzte Aufbewahrung; `app/zrzavy_energy_monitor_core/persistence/queries.py` bietet Zeitbereichsabfragen. `app/zrzavy_energy_monitor_core/web/export.py` stellt additive CSV-Exporte bereit. Das vollständige Schema steht in [docs/development/4.5/database-schema.md](development/4.5/database-schema.md).
 
 ### Web, Deployment und Laufzeitpfade
 

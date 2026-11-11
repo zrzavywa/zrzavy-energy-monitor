@@ -45,7 +45,7 @@ def test_unversioned_phase_09_schema_is_stamped_and_verified(
             """
         ).fetchall()
 
-    assert [migration.version for migration in applied] == [1, 2]
+    assert [migration.version for migration in applied] == [1, 2, 3]
     assert [tuple(row) for row in rows] == [
         (
             1,
@@ -58,6 +58,13 @@ def test_unversioned_phase_09_schema_is_stamped_and_verified(
             2,
             "2026-07-26T18:00:00+00:00",
             "Add normalized measurements and source-selection events.",
+            "4.5.0",
+            64,
+        ),
+        (
+            3,
+            "2026-07-26T18:00:00+00:00",
+            "Add hourly device-availability counters.",
             "4.5.0",
             64,
         ),
@@ -74,9 +81,9 @@ def test_migration_is_idempotent_for_verified_schema(tmp_path: Path) -> None:
             "SELECT COUNT(*) FROM schema_migrations"
         ).fetchone()[0]
 
-    assert len(first) == 2
+    assert len(first) == 3
     assert second == ()
-    assert row_count == 2
+    assert row_count == 3
 
 
 def test_incomplete_schema_rolls_back_version_ledger() -> None:
@@ -115,7 +122,7 @@ def test_unknown_newer_version_is_rejected_without_changes(
             )
             VALUES (?, ?, ?, ?, ?)
             """,
-            (3, APPLIED_AT.isoformat(), "Future schema", "4.6.0", "future"),
+            (4, APPLIED_AT.isoformat(), "Future schema", "4.6.0", "future"),
         )
         connection.commit()
 
@@ -132,7 +139,7 @@ def test_unknown_newer_version_is_rejected_without_changes(
             )
         ]
 
-    assert versions == [1, 2, 3]
+    assert versions == [1, 2, 3, 4]
 
 
 def test_tampered_migration_checksum_is_rejected(tmp_path: Path) -> None:
@@ -154,10 +161,11 @@ def test_tampered_migration_checksum_is_rejected(tmp_path: Path) -> None:
 
 
 def test_planner_validates_version_range() -> None:
-    assert get_target_version() == 2
-    assert [migration.version for migration in plan_migrations(0)] == [1, 2]
-    assert [migration.version for migration in plan_migrations(1)] == [2]
-    assert plan_migrations(2) == ()
+    assert get_target_version() == 3
+    assert [migration.version for migration in plan_migrations(0)] == [1, 2, 3]
+    assert [migration.version for migration in plan_migrations(1)] == [2, 3]
+    assert [migration.version for migration in plan_migrations(2)] == [3]
+    assert plan_migrations(3) == ()
 
     with pytest.raises(ValueError, match="must not be negative"):
         plan_migrations(-1)
@@ -165,7 +173,7 @@ def test_planner_validates_version_range() -> None:
         UnsupportedSchemaVersionError,
         match="newer than supported",
     ):
-        plan_migrations(3)
+        plan_migrations(4)
 
 
 def test_migration_rejects_naive_timestamp_before_writing(

@@ -68,6 +68,7 @@ zustandsändernde, netzwerkaktive und destruktive Routen aufrufen.
 | `GET /api/validation/summary` | `ui_internal_read` | Weboberfläche | keiner |
 | `GET /api/phases/live` | `ui_internal_read` | Weboberfläche | keiner |
 | `GET /api/phases/dashboard` | `ui_internal_read` | Weboberfläche | keiner |
+| `GET /api/devices/availability` | `ui_internal_read` | Weboberfläche | keiner |
 | `POST /api/test-device/<role>` | `diagnostic_network` | lokale Einrichtung | lokaler Gerätezugriff |
 | `POST /api/test-solakon-one` | `diagnostic_network` | lokale Einrichtung | lokaler Modbus-Zugriff |
 | `GET /api/export.csv` | `file_export` | lokaler Datenexport | liest potenziell sensible Daten |
@@ -373,6 +374,45 @@ Finding-Strukturen sind erweiterbar.
 - **Synthetisches Beispiel:** `GET
   /api/phases/dashboard?period=day&anchor=2026-07-27` liefert
   `{"period":"day","anchor":"2026-07-27","source_id":"house_meter","labels":[],"series":{"l1_power_w":[]},"summary":{"sample_count":0}}`.
+
+### `GET /api/devices/availability`
+
+- **Klassifikation, Zweck und Stabilität:** `ui_internal_read`; gebuckette
+  Erreichbarkeit je konfiguriertem Gerät aus dem Stundenzähler-Protokoll;
+  unversioniert.
+- **Queryparameter:** `period` Default `day`, erlaubt `day`, `week`,
+  `month`, sonst Fallback `day`; `anchor` als ISO-Datum, sonst heute.
+- **Request:** kein Body.
+- **Erfolg:** `200`; `period`, `anchor`, `title`, `timezone`,
+  `bucket_seconds` (3600), `bucket_count`, `period_start_epoch`,
+  `period_end_epoch`, `tick_indices`, `tick_labels` sowie `devices` mit
+  `role`, `source_id`, `name`, `adapter`, `configured`, `coverage`,
+  `state`, `buckets` und `summary`.
+- **Buckets:** je Gerät ein Array aus `[online, degraded, offline, disabled]`
+  in Zyklen, Länge entspricht `bucket_count`. Ein leeres Quad bedeutet, dass
+  der Sammler in dieser Stunde keine Zeile geschrieben hat. Ein Balken
+  entspricht einer Stunde; Auflösung feiner als eine Stunde gibt das
+  Protokoll nicht her.
+- **Summary:** `coverage` (`recorded`, `derived`, `none`), `state`
+  (`good`, `limited`, `bad`, `inactive`, `nodata`), `observations`,
+  `hours_observed`, `hours_in_period`, `reachable_pct`, `unreachable_pct`,
+  `degraded_pct`, `inactive_pct` sowie erstem und letztem Beobachtungszeitpunkt.
+- **Statusregel:** `online` und `degraded` gelten als erreichbar; nur
+  `offline` ist ein Ausfall. Diagnosen werden getrennt als `degraded_pct`
+  ausgewiesen, damit ein dauerhaft diagnostizierendes Gerät nicht als
+  Dauerausfall erscheint.
+- **Fehler:** keine fachlichen `4xx` für ungültige Parameter;
+  Datenbankfehler ergeben `500`.
+- **Einheiten und Grenzen:** Zählwerte in Zyklen, Prozentwerte mit einer
+  Nachkommastelle, Zeiten als UTC-Epoche; `timezone` benennt die für die
+  Tagesgrenzen verwendete Zone. An Tagen mit Zeitumstellung hat der Tag 23
+  oder 25 Buckets.
+- **Seiteneffekt und Sicherheit:** lesender Zugriff ohne Zugriffsschutz;
+  keine Gerätekommunikation.
+- **Synthetisches Beispiel:** `GET /api/devices/availability?period=day`
+  liefert `{"period":"day","bucket_seconds":3600,"bucket_count":24,
+  "devices":[{"role":"grid_meter","coverage":"none","state":"nodata",
+  "buckets":[[0,0,0,0]]}]}`.
 
 ## Gerätediagnose
 

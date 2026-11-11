@@ -19,7 +19,7 @@ from zrzavy_energy_monitor_core.branding import (
 )
 
 # Frontend assets whose content decides the cache-busting token.
-VERSIONED_ASSETS: Final = ("app.css", "dashboard.js", "update.js")
+VERSIONED_ASSETS: Final = ("app.css", "availability.js", "dashboard.js", "update.js")
 
 
 def compute_asset_version(static_directory: Path) -> str:

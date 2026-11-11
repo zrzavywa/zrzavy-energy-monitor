@@ -59,6 +59,31 @@
   </div>
 </section>
 
+<section class="panel availability-panel">
+  <div class="panel-head">
+    <div>
+      <p class="eyebrow">VERFÜGBARKEIT</p>
+      <h2>Erreichbarkeit je Gerät</h2>
+      <p id="availability-title" class="hint">Zeitraum wird geladen …</p>
+    </div>
+    <div class="availability-periods" role="group" aria-label="Zeitraum wählen">
+      <button type="button" class="availability-period is-active" data-period="day" aria-pressed="true">24 Stunden</button>
+      <button type="button" class="availability-period" data-period="week" aria-pressed="false">7 Tage</button>
+      <button type="button" class="availability-period" data-period="month" aria-pressed="false">30 Tage</button>
+    </div>
+  </div>
+  <div id="availability-rows" class="availability-rows">
+    <p class="hint">Verfügbarkeitsdaten werden geladen …</p>
+  </div>
+  <div class="availability-legend">
+    <span><i class="legend-good"></i>erreichbar</span>
+    <span><i class="legend-limited"></i>erreichbar mit Einschränkung</span>
+    <span><i class="legend-bad"></i>nicht erreichbar</span>
+    <span><i class="legend-nodata"></i>keine Daten</span>
+  </div>
+  <p class="hint">Ein Balken entspricht einer Stunde. Graue Abschnitte bedeuten, dass der Sammler in dieser Stunde keine Messung geschrieben hat. Die Werte stammen aus dem Erreichbarkeitsprotokoll, nicht aus den Rohmesswerten.</p>
+</section>
+
 <section class="panel">
   {% set one = config.solakon_one %}
   <div class="panel-head">
@@ -73,6 +98,7 @@
 </section>
 {% endblock %}
 {% block scripts %}
+<script src="{{ url_for('static', filename='availability.js') }}?v={{ asset_version }}"></script>
 <script>
 const startButton = document.getElementById("start-button");
 const stopButton = document.getElementById("stop-button");

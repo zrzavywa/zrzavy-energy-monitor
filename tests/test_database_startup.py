@@ -57,8 +57,8 @@ def test_missing_database_is_initialized_backed_up_and_migrated(
 
     assert result.created is True
     assert result.previous_schema_version == 0
-    assert result.current_schema_version == 2
-    assert result.applied_migration_versions == (1, 2)
+    assert result.current_schema_version == 3
+    assert result.applied_migration_versions == (1, 2, 3)
     assert result.backup_path is not None
     assert result.backup_path.is_file()
     assert inspect_database(database).table_counts["samples"] == 0
@@ -75,7 +75,7 @@ def test_legacy_database_is_backed_up_before_migration(tmp_path: Path) -> None:
 
     assert result.created is False
     assert result.previous_schema_version == 0
-    assert result.current_schema_version == 2
+    assert result.current_schema_version == 3
     assert result.backup_path is not None
     assert inspect_database(result.backup_path).current_schema_version == 0
     assert inspect_database(result.backup_path).table_counts["samples"] == 2
@@ -138,9 +138,9 @@ def test_phase_09_intermediate_schema_is_recognized(tmp_path: Path) -> None:
         application_version="4.5.0",
     )
 
-    assert result.applied_migration_versions == (1, 2)
+    assert result.applied_migration_versions == (1, 2, 3)
     with closing(sqlite3.connect(database)) as connection:
-        assert get_current_version(connection) == 2
+        assert get_current_version(connection) == 3
         assert (
             connection.execute(
                 "SELECT COUNT(*) FROM energy_balance_samples"
@@ -160,7 +160,7 @@ def test_unknown_newer_schema_refuses_startup_without_backup(
                 version, applied_at, description, application_version, checksum
             ) VALUES (?, ?, ?, ?, ?)
             """,
-            (3, "2026-07-26T20:00:00+00:00", "future", "5.0.0", "future"),
+            (4, "2026-07-26T20:00:00+00:00", "future", "5.0.0", "future"),
         )
         connection.commit()
 
@@ -177,7 +177,7 @@ def test_unknown_newer_schema_refuses_startup_without_backup(
             connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[
                 0
             ]
-            == 3
+            == 4
         )
 
 
@@ -215,7 +215,7 @@ def test_failed_migration_is_reported_once_without_retry(
 def test_application_import_constructs_collector_only_after_target_schema() -> None:
     import zrzavy_energy_monitor as application
 
-    assert application.database_startup.current_schema_version == 2
+    assert application.database_startup.current_schema_version == 3
     assert application.collector.database is application.database
     with application.database.connect() as connection:
-        assert get_current_version(connection) == 2
+        assert get_current_version(connection) == 3

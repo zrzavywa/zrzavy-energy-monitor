@@ -124,3 +124,18 @@ def test_acquisition_page_renders_the_grid_meter_card() -> None:
         assert f'data-device-role="{role}"' in html
     assert "Konfigurierte Geräte" in html
     assert "Offizieller Netzstromzähler" in html
+
+
+def test_acquisition_page_renders_the_availability_panel() -> None:
+    """Expose the markup the availability script binds to."""
+
+    client = application.app.test_client()
+
+    html = client.get("/acquisition").get_data(as_text=True)
+
+    assert 'id="availability-rows"' in html
+    assert 'id="availability-title"' in html
+    for period in ("day", "week", "month"):
+        assert f'data-period="{period}"' in html
+    assert "availability.js?v=" in html
+    assert "erreichbar mit Einschränkung" in html

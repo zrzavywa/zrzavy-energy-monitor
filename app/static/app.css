@@ -838,3 +838,37 @@ body.is-loading .chart-panel {
     print-color-adjust: exact;
   }
 }
+
+/* Zrzavy Energy Monitor – Geräteverfügbarkeit */
+.availability-periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.availability-period {
+  border: 1px solid var(--line); background: white; color: var(--muted);
+  border-radius: 999px; padding: 7px 12px; font: inherit; font-size: 12px;
+  font-weight: 700; cursor: pointer;
+}
+.availability-period.is-active { background: var(--green); border-color: var(--green); color: white; }
+.availability-rows { display: grid; gap: 14px; margin-top: 8px; }
+.availability-row { display: grid; gap: 4px; }
+.availability-row-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.availability-row-head strong { font-size: 13px; }
+.availability-state { font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.availability-state.state-good { background: #e5f5ed; color: var(--green-dark); }
+.availability-state.state-limited { background: #fff3ce; color: #8a6510; }
+.availability-state.state-bad { background: #f7e6e6; color: #9b3737; }
+.availability-state.state-nodata, .availability-state.state-inactive { background: #f0f1f1; color: var(--muted); }
+.availability-summary { color: var(--muted); font-size: 12px; }
+.availability-canvas { width: 100%; display: block; }
+.availability-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 11px; color: var(--muted); }
+.availability-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.availability-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend-good { background: #15845b; }
+.legend-limited { background: #d9a11c; }
+.legend-bad { background: #b34141; }
+.legend-nodata { background: #e2e6e3; }
+.availability-inactive { margin-top: 10px; }
+.availability-tooltip {
+  position: fixed; z-index: 90; background: #1d2b26; color: white; font-size: 11px;
+  padding: 6px 9px; border-radius: 8px; pointer-events: none; opacity: 0;
+  transition: opacity .12s;
+}
+.availability-tooltip.visible { opacity: 1; }

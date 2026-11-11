@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Final
 
-TARGET_SCHEMA_VERSION: Final = 2
+TARGET_SCHEMA_VERSION: Final = 3
 """Latest schema version understood by this application."""
 
 _SCHEMA_MIGRATIONS_TABLE_SQL: Final = """
@@ -164,6 +164,25 @@ CREATE TABLE IF NOT EXISTS grid_meter_samples (
     grid_export_total_kwh REAL,
     grid_export_total_quality TEXT,
     FOREIGN KEY (sample_id) REFERENCES samples(id) ON DELETE CASCADE
+)
+"""
+
+_DEVICE_AVAILABILITY_TABLE_SQL: Final = """
+CREATE TABLE IF NOT EXISTS device_availability_hours (
+    source_id TEXT NOT NULL,
+    hour_start INTEGER NOT NULL,
+    online_count INTEGER NOT NULL DEFAULT 0 CHECK (online_count >= 0),
+    degraded_count INTEGER NOT NULL DEFAULT 0 CHECK (degraded_count >= 0),
+    offline_count INTEGER NOT NULL DEFAULT 0 CHECK (offline_count >= 0),
+    disabled_count INTEGER NOT NULL DEFAULT 0 CHECK (disabled_count >= 0),
+    unknown_count INTEGER NOT NULL DEFAULT 0 CHECK (unknown_count >= 0),
+    observation_count INTEGER NOT NULL DEFAULT 0
+        CHECK (observation_count >= 0),
+    first_seen_epoch REAL,
+    last_seen_epoch REAL,
+    origin TEXT NOT NULL DEFAULT 'recorded'
+        CHECK (origin IN ('recorded', 'derived')),
+    PRIMARY KEY (source_id, hour_start)
 )
 """
 
@@ -483,6 +502,22 @@ _REQUIRED_COLUMNS: Final[dict[str, frozenset[str]]] = {
     ),
 }
 
+_REQUIRED_AVAILABILITY_COLUMNS: Final = frozenset(
+    {
+        "source_id",
+        "hour_start",
+        "online_count",
+        "degraded_count",
+        "offline_count",
+        "disabled_count",
+        "unknown_count",
+        "observation_count",
+        "first_seen_epoch",
+        "last_seen_epoch",
+        "origin",
+    }
+)
+
 _REQUIRED_INDEXES: Final = frozenset(
     {
         "idx_samples_ts_epoch",
@@ -720,6 +755,15 @@ def _migrate_version_2(
     )
 
 
+def _migrate_version_3(
+    connection: sqlite3.Connection,
+    _applied_at: str,
+) -> None:
+    """Add the hourly device-availability time series."""
+
+    connection.execute(_DEVICE_AVAILABILITY_TABLE_SQL)
+
+
 _MIGRATIONS: Final = (
     Migration(
         version=1,
@@ -748,6 +792,14 @@ _MIGRATIONS: Final = (
             ).encode("utf-8")
         ).hexdigest(),
         apply=_migrate_version_2,
+    ),
+    Migration(
+        version=3,
+        description="Add hourly device-availability counters.",
+        checksum=hashlib.sha256(
+            _DEVICE_AVAILABILITY_TABLE_SQL.encode("utf-8")
+        ).hexdigest(),
+        apply=_migrate_version_3,
     ),
 )
 
@@ -946,6 +998,19 @@ def verify_schema(connection: sqlite3.Connection) -> None:
             raise SchemaVerificationError(
                 f"Table {table_name} is missing columns: {', '.join(missing_columns)}."
             )
+
+    availability_columns = {
+        str(row[1])
+        for row in connection.execute(
+            "PRAGMA table_info(device_availability_hours)"
+        ).fetchall()
+    }
+    missing_availability = sorted(_REQUIRED_AVAILABILITY_COLUMNS - availability_columns)
+    if missing_availability:
+        raise SchemaVerificationError(
+            "Table device_availability_hours is missing columns: "
+            f"{', '.join(missing_availability)}."
+        )
 
     actual_indexes = {
         str(row[0])

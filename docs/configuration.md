@@ -347,7 +347,12 @@ begrenzt. Die Werte werden beim Start aus diesem Abschnitt gelesen:
 | `raw_high_resolution_days` | Aufbewahrungsdauer roher hochauflösender Werte |
 | `validation_events_days` | Aufbewahrungsdauer von Validierungsereignissen |
 | `source_selection_events_days` | Aufbewahrungsdauer von Quellenentscheidungen |
+| `availability_days` | Aufbewahrungsdauer der stündlichen Erreichbarkeitszähler |
 | `batch_rows` | Maximale Zeilen je begrenztem Bereinigungslauf |
+
+Die Erreichbarkeitszähler sind bewusst unabhängig von den Rohmesswerten: Sie
+wachsen nur mit Stunden (rund 35 000 Zeilen und wenige Megabyte pro Jahr) und
+überleben deshalb das Löschen der hochauflösenden Rohdaten.
 
 Die Konfigurationsvorlage enthält außerdem die folgenden Blatt-Schlüssel; sie
 werden hier bewusst als Referenzschlüssel und nicht als Wertprüfung aufgeführt:
@@ -364,7 +369,8 @@ werden hier bewusst als Referenzschlüssel und nicht als Wertprüfung aufgeführ
 `phase_power_l3_w`, `shrdzm_rest`, `endpoint`, `authentication_mode`,
 `username_parameter`, `password_parameter`, `energy_total_unit`,
 `raw_high_resolution_days`, `validation_events_days`,
-`source_selection_events_days`, `batch_rows`, `maximum_measurement_age_seconds`,
+`source_selection_events_days`, `availability_days`, `batch_rows`,
+`maximum_measurement_age_seconds`,
 `maximum_source_skew_seconds`, `allow_suspect_measurements`,
 `allow_grid_fallback`, `allow_plant_fallback`,
 `negative_house_power_tolerance_w`, `short_window_average_seconds`,
