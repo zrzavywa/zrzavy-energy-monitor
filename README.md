@@ -8,7 +8,7 @@
 
 > Open-source home energy monitoring and validation
 
-> Dokumentationsstand: Zrzavy Energy Monitor **4.8.2**
+> Dokumentationsstand: Zrzavy Energy Monitor **4.9.0**
 > Primärplattform: Raspberry Pi OS beziehungsweise Debian-basierte Linux-Systeme
 
 ## Hauptfunktionen
@@ -151,6 +151,8 @@ Weitere Informationen enthält die Datei [TRADEMARKS.md](TRADEMARKS.md).
 Die geltende Lizenz ergibt sich aus der Datei `LICENSE` im Repository.
 
 ## Dokument-Change-Log
+
+- 2026-11-11 — Produktstand auf 4.9.0 gehoben; Anlass/Quelle: Gerätekarten der Seite „Datenerfassung" werden aus der Konfiguration erzeugt und zeigen den offiziellen Netzstromzähler; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 
 - 2026-11-08 — Produktstand auf 4.8.2 gehoben; Anlass/Quelle: Release-Notes werden formatiert dargestellt, Statusanzeige ohne Statusdatei korrigiert; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 

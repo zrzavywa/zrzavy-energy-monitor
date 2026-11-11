@@ -66,8 +66,11 @@ def build_template_context(
             "solakon_pv": "Solakon ONE – PV-Eingangsleistung (DC)",
         },
         "grid_source_types": {
-            "auto": "Automatisch: separate Hausmessung, sonst Solakon ONE Meter",
-            "house_meter": "Separate Hausmessung (Shelly 3EM)",
-            "solakon_one": "Solakon ONE – verbundenes Meter/CT",
+            "auto": (
+                "Automatisch: offizieller Netzstromzähler, sonst separate "
+                "Hausmessung, sonst Solakon ONE Meter"
+            ),
+            "house_meter": "Fallback: separate Hausmessung (Shelly 3EM)",
+            "solakon_one": "Fallback: Solakon ONE – verbundenes Meter/CT",
         },
     }

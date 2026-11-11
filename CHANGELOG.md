@@ -8,6 +8,28 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.9.0] — 2026-11-11
+
+### Geändert
+
+- Die Gerätekarten auf der Seite „Datenerfassung" werden aus der Konfiguration
+  erzeugt statt im Template fest verdrahtet. Dadurch erscheint auch der
+  offizielle Netzstromzähler als eigene Karte, mit Adapter, Protokoll, Port
+  und Host aus seiner Konfiguration.
+- Jede Karte zeigt ihren Zustand jetzt dreistufig: „aktiv", „Host fehlt"
+  (aktiviert, aber ohne Adresse) und „inaktiv". Eine aktivierte Quelle ohne
+  Adresse ist damit von einer bewusst abgeschalteten unterscheidbar.
+- Ist die Anlagenmessung (Shelly Plug M) aktiv, ersetzt ihre Karte die
+  Shelly-AC-Erzeugungskarte. Das entspricht der Quelle, die der Collector
+  tatsächlich abfragt.
+
+### Behoben
+
+- Die Auswahl `general.grid_power_source` nannte den offiziellen
+  Netzstromzähler nicht, obwohl er bei gültigen Werten immer Vorrang hat. Die
+  Beschriftungen benennen ihn jetzt und kennzeichnen Hausmessung und
+  Solakon-Meter ausdrücklich als Fallback.
+
 ## [4.8.2] — 2026-11-08
 
 ### Geändert

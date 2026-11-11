@@ -139,6 +139,7 @@ from zrzavy_energy_monitor_core.web.context import (
     build_template_context,
     compute_asset_version,
 )
+from zrzavy_energy_monitor_core.web.devices import build_device_cards
 from zrzavy_energy_monitor_core.web.export import (
     DEFAULT_MAXIMUM_EXPORT_ROWS,
     build_csv_export,
@@ -321,10 +322,12 @@ def dashboard_page():
 @app.get("/acquisition")
 def acquisition_page():
     """acquisition_page handles the associated HTTP route and delegates application work to the corresponding service."""
+    active_config = config_manager.get()
     return render_acquisition_page(
         render_template,
         status=collector.status(),
-        config=config_manager.get(),
+        config=active_config,
+        devices=build_device_cards(active_config, DEVICE_TYPES),
     )
 
 

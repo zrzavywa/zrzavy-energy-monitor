@@ -26,13 +26,15 @@ def render_acquisition_page(
     renderer: TemplateRenderer,
     status: dict[str, Any],
     config: dict[str, Any],
+    devices: list[dict[str, Any]],
 ) -> Any:
-    """Render the existing acquisition page."""
+    """Render the acquisition page with its configured-device cards."""
     return renderer(
         "acquisition.html",
         active_page="acquisition",
         status=status,
         config=config,
+        devices=devices,
     )
 
 

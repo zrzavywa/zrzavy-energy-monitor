@@ -45,33 +45,22 @@
     <a class="button secondary" href="{{ url_for('configuration_page') }}">Konfiguration öffnen</a>
   </div>
   <div class="device-grid">
-    {% set one = config.solakon_one %}
-    <article class="device-card">
-      <div class="device-icon">1</div>
-      <div>
-        <strong>Solakon ONE</strong>
-        <span>Modbus TCP · Port {{ one.port }} · Geräte-ID {{ one.device_id }}</span>
-        <small>{{ "Simulation" if one.simulation else (one.host or "Keine IP konfiguriert") }}</small>
-      </div>
-      <span class="mini-pill {{ 'on' if one.enabled else 'off' }}">{{ "aktiv" if one.enabled else "inaktiv" }}</span>
-    </article>
-
-    {% for role, title in [('house_meter', 'Separate Hausanschlussmessung'), ('solakon_meter', 'Shelly AC-Erzeugungsmessung')] %}
-      {% set device = config[role] %}
-      <article class="device-card">
-        <div class="device-icon">{{ "H" if role == "house_meter" else "S" }}</div>
+    {% for card in devices %}
+      <article class="device-card" data-device-role="{{ card.role }}" data-source-id="{{ card.source_id }}">
+        <div class="device-icon">{{ card.icon }}</div>
         <div>
-          <strong>{{ title }}</strong>
-          <span>{{ device_types[device.type] }}</span>
-          <small>{{ device.host or "Keine IP konfiguriert" }}</small>
+          <strong>{{ card.title }}</strong>
+          <span>{{ card.transport }}</span>
+          <small>{{ card.host }}</small>
         </div>
-        <span class="mini-pill {{ 'on' if device.enabled else 'off' }}">{{ "aktiv" if device.enabled else "inaktiv" }}</span>
+        <span class="mini-pill {{ card.pill_class }}">{{ card.pill }}</span>
       </article>
     {% endfor %}
   </div>
 </section>
 
 <section class="panel">
+  {% set one = config.solakon_one %}
   <div class="panel-head">
     <div><p class="eyebrow">AUSWAHL</p><h2>Verwendete Messwerte</h2></div>
   </div>
