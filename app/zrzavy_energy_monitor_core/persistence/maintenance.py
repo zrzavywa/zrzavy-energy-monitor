@@ -80,6 +80,7 @@ def inspect_database(
     *,
     verify_integrity: bool = True,
     count_rows: bool = True,
+    quick_check: bool = False,
 ) -> DatabaseInspection:
     """Inspect a SQLite database without creating or modifying it.
 
@@ -109,7 +110,11 @@ def inspect_database(
         with _read_only_connection(path) as connection:
             integrity = "not_checked"
             if verify_integrity:
-                integrity = _integrity_result(connection)
+                integrity = (
+                    _quick_integrity_result(connection)
+                    if quick_check
+                    else _integrity_result(connection)
+                )
                 if integrity != "ok":
                     raise DatabaseMaintenanceError(
                         f"database integrity check failed: {integrity}"
@@ -144,6 +149,7 @@ def create_database_backup(
     *,
     target_schema_version: int,
     created_at: datetime | None = None,
+    source_inspection: DatabaseInspection | None = None,
 ) -> DatabaseBackup:
     """Create and verify one consistent private SQLite backup.
 
@@ -152,6 +158,9 @@ def create_database_backup(
         backup_directory: Directory created with mode ``0700`` when absent.
         target_schema_version: Planned target included in the filename.
         created_at: Optional timezone-aware timestamp; defaults to UTC now.
+        source_inspection: Optional inspection already performed by the
+            caller. Reusing it avoids a second full integrity scan of a large
+            source database. It must belong to the same database path.
 
     Returns:
         Metadata for the verified ``0600`` backup.
@@ -172,7 +181,7 @@ def create_database_backup(
     timestamp = created_at or datetime.now(timezone.utc)
     if timestamp.utcoffset() is None:
         raise ValueError("backup timestamp must be timezone-aware")
-    source_inspection = inspect_database(database_path)
+    inspection = source_inspection or inspect_database(database_path)
     directory = backup_directory.expanduser().resolve()
     if directory.exists() and not directory.is_dir():
         raise DatabaseMaintenanceError(
@@ -184,14 +193,14 @@ def create_database_backup(
     stamp = timestamp.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     filename = (
         f"solarinspector-before-schema-{target_schema_version}-{stamp}"
-        f"-from-{source_inspection.current_schema_version}.db"
+        f"-from-{inspection.current_schema_version}.db"
     )
     destination = directory / filename
     if destination.exists():
         raise DatabaseMaintenanceError(
             f"backup destination already exists: {destination}"
         )
-    if destination.resolve() == source_inspection.database_path:
+    if destination.resolve() == inspection.database_path:
         raise DatabaseMaintenanceError("backup destination equals source database")
 
     descriptor, temporary_name = tempfile.mkstemp(
@@ -204,13 +213,15 @@ def create_database_backup(
     try:
         os.chmod(temporary, PRIVATE_FILE_MODE)
         with (
-            _read_only_connection(source_inspection.database_path) as source,
+            _read_only_connection(inspection.database_path) as source,
             closing(sqlite3.connect(temporary)) as target,
         ):
             source.backup(target)
             target.commit()
-        temporary_inspection = inspect_database(temporary)
-        _verify_backup_matches(source_inspection, temporary_inspection)
+        # The copy comes from an already verified source through SQLite's
+        # online backup API, so a quick check plus the row counts is enough.
+        temporary_inspection = inspect_database(temporary, quick_check=True)
+        _verify_backup_matches(inspection, temporary_inspection)
         temporary.replace(destination)
         os.chmod(destination, PRIVATE_FILE_MODE)
     except Exception:
@@ -218,9 +229,9 @@ def create_database_backup(
         raise
 
     return DatabaseBackup(
-        source_path=source_inspection.database_path,
+        source_path=inspection.database_path,
         backup_path=destination,
-        source_schema_version=source_inspection.current_schema_version,
+        source_schema_version=inspection.current_schema_version,
         target_schema_version=target_schema_version,
         integrity_check=temporary_inspection.integrity_check,
         sample_count=temporary_inspection.table_counts.get("samples"),
@@ -314,12 +325,16 @@ def migrate_database_with_backup(
     """
 
     timestamp = created_at or datetime.now(timezone.utc)
+    # One full integrity scan, reused by the backup. Re-inspecting the source
+    # inside create_database_backup doubled the dominating cost on a
+    # multi-gigabyte USB database.
     source = inspect_database(database_path)
     backup = create_database_backup(
         source.database_path,
         backup_directory,
         target_schema_version=get_target_version(),
         created_at=timestamp,
+        source_inspection=source,
     )
     if backup_created is not None:
         backup_created(backup.backup_path)
@@ -332,14 +347,21 @@ def migrate_database_with_backup(
                 applied_at=timestamp,
             )
             verify_schema(connection)
-            integrity = _integrity_result(connection)
+            # A purely additive migration cannot rewrite existing pages, so a
+            # quick check is proportionate here. The pre-migration scan above
+            # stays a full integrity check.
+            integrity = (
+                _quick_integrity_result(connection)
+                if applied and all(migration.additive for migration in applied)
+                else _integrity_result(connection)
+            )
     except sqlite3.DatabaseError:
         raise
     if integrity != "ok":
         raise DatabaseMaintenanceError(
             f"post-migration integrity check failed: {integrity}"
         )
-    migrated = inspect_database(source.database_path)
+    migrated = inspect_database(source.database_path, quick_check=True)
     _verify_domain_counts_preserved(source, migrated)
     return MigrationRun(
         database_path=source.database_path,
@@ -402,6 +424,11 @@ def _read_only_connection(path: Path) -> Iterator[sqlite3.Connection]:
 
 def _integrity_result(connection: sqlite3.Connection) -> str:
     rows = connection.execute("PRAGMA integrity_check").fetchall()
+    return "\n".join(str(row[0]) for row in rows)
+
+
+def _quick_integrity_result(connection: sqlite3.Connection) -> str:
+    rows = connection.execute("PRAGMA quick_check").fetchall()
     return "\n".join(str(row[0]) for row in rows)
 
 

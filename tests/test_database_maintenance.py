@@ -240,3 +240,109 @@ def test_cli_info_dry_run_and_failure_exit_codes(
     failure = capsys.readouterr()
     assert "Datenbankoperation fehlgeschlagen" in failure.err
     assert not missing.exists()
+
+
+def test_migration_does_not_rescan_the_source_for_the_backup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reuse the pre-migration inspection instead of scanning twice.
+
+    The remaining full scan is the post-migration check, which stays a full
+    integrity check because versions 1 and 2 rewrite the schema.
+    """
+
+    database = _legacy_database(tmp_path)
+    full_scans = 0
+    original_integrity = maintenance._integrity_result
+
+    def counting_integrity(connection: sqlite3.Connection) -> str:
+        nonlocal full_scans
+        full_scans += 1
+        return original_integrity(connection)
+
+    monkeypatch.setattr(maintenance, "_integrity_result", counting_integrity)
+
+    migrate_database_with_backup(
+        database,
+        tmp_path / "backups",
+        application_version="4.10.0",
+        created_at=CREATED_AT,
+    )
+
+    assert full_scans == 2
+
+
+def test_additive_migrations_use_a_quick_check_afterwards(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Skip the expensive full scan after a purely additive migration."""
+
+    database = _legacy_database(tmp_path)
+    calls: list[str] = []
+    original_full = maintenance._integrity_result
+    original_quick = maintenance._quick_integrity_result
+
+    def counting_full(connection: sqlite3.Connection) -> str:
+        calls.append("full")
+        return original_full(connection)
+
+    def counting_quick(connection: sqlite3.Connection) -> str:
+        calls.append("quick")
+        return original_quick(connection)
+
+    monkeypatch.setattr(maintenance, "_integrity_result", counting_full)
+    monkeypatch.setattr(maintenance, "_quick_integrity_result", counting_quick)
+
+    migrate_database_with_backup(
+        database,
+        tmp_path / "backups",
+        application_version="4.10.0",
+        created_at=CREATED_AT,
+    )
+
+    # Version 1 and 2 rewrite the schema, so the plan is not additive here.
+    assert calls.count("full") >= 1
+
+
+def test_additive_only_plan_uses_quick_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the quick check when every pending migration only adds objects."""
+
+    database = _legacy_database(tmp_path)
+    with closing(sqlite3.connect(database)) as connection:
+        maintenance.apply_migrations(
+            connection,
+            application_version="4.10.0",
+            applied_at=CREATED_AT,
+        )
+        connection.execute("DELETE FROM schema_migrations WHERE version = 3")
+        connection.commit()
+
+    calls: list[str] = []
+    original_full = maintenance._integrity_result
+    original_quick = maintenance._quick_integrity_result
+
+    def counting_full(connection: sqlite3.Connection) -> str:
+        calls.append("full")
+        return original_full(connection)
+
+    def counting_quick(connection: sqlite3.Connection) -> str:
+        calls.append("quick")
+        return original_quick(connection)
+
+    monkeypatch.setattr(maintenance, "_integrity_result", counting_full)
+    monkeypatch.setattr(maintenance, "_quick_integrity_result", counting_quick)
+
+    migrate_database_with_backup(
+        database,
+        tmp_path / "backups",
+        application_version="4.10.0",
+        created_at=CREATED_AT,
+    )
+
+    assert "quick" in calls
+    assert calls.count("full") == 1

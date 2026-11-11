@@ -8,6 +8,22 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 Keine Änderungen.
 
+## [4.10.1] — 2026-11-11
+
+### Geändert
+
+- Der Migrationspfad prüft die Quelldatenbank nur noch einmal. Bisher
+  inspizierte er sie vor dem Backup, das Backup inspizierte sie erneut und
+  verifizierte zusätzlich die Kopie — auf einer 6,1-GB-Datenbank an USB sind
+  das drei vollständige Integritätsläufe von je rund einer Stunde.
+- Nach einer rein additiven Migration genügt `PRAGMA quick_check` statt eines
+  vollständigen Laufs: Ein `CREATE TABLE` kann vorhandene Seiten nicht
+  verändern. Die Prüfung **vor** der Migration bleibt unverändert ein
+  vollständiger Integritätslauf; sie ist die Instanz, die eine beschädigte
+  Datenbank erkennt.
+- Migrationen tragen dafür ein Merkmal „additiv"; die Schema-Migration 3 ist
+  als additiv gekennzeichnet.
+
 ## [4.10.0] — 2026-11-11
 
 ### Neu

@@ -556,12 +556,17 @@ class Migration:
         checksum: SHA-256 digest of the migration definition.
         apply: Function that changes an open SQLite connection using the
             migration timestamp. The caller owns the encompassing transaction.
+        additive: Whether the migration only creates new objects. An additive
+            migration cannot change existing rows or pages, so the check after
+            it may use SQLite's cheaper quick_check. The check before it stays
+            a full integrity check.
     """
 
     version: int
     description: str
     checksum: str
     apply: Callable[[sqlite3.Connection, str], None]
+    additive: bool = False
 
 
 def _migrate_version_1(
@@ -800,6 +805,7 @@ _MIGRATIONS: Final = (
             _DEVICE_AVAILABILITY_TABLE_SQL.encode("utf-8")
         ).hexdigest(),
         apply=_migrate_version_3,
+        additive=True,
     ),
 )
 
