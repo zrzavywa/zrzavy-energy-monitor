@@ -391,7 +391,72 @@ sudo /opt/zrzavy-energy-monitor/current/.venv/bin/python \
 Abgeleitete Stunden tragen `origin='derived'` und erscheinen im Endpunkt als
 `coverage: "derived"`. Sie überschreiben keine erfassten Stunden.
 
+## Betrieb als eigenständige Instanz hinter einem Relay
+
+Die Anwendung braucht nur Python 3.11–3.13 und ein beschreibbares
+Datenverzeichnis. Sie kann deshalb auch als eigene Instanz auf einer VM oder
+einem Container laufen, getrennt von den Messgeräten.
+
+### Wenn der Zielhost die Geräte nicht direkt erreicht
+
+Stehen die Messgeräte in einem anderen Netz als die Instanz und ist ein
+vorhandener Tunnel-Endpunkt der einzige Rechner in beiden Netzen, dient dieser
+Endpunkt als Router. Ein zusätzlicher HTTP- oder Modbus-Proxy ist dafür nicht
+nötig; Modbus TCP und die Shelly-Aufrufe sind gewöhnliche TCP-Verbindungen.
+
+Auf dem Relay:
+
+- `net.ipv4.ip_forward=1` über `/etc/sysctl.d/` setzen,
+- Weiterleitung nur für die tatsächlich benötigten Ports erlauben
+  (Modbus 502, HTTP 80 und 443) und die `FORWARD`-Policy auf `DROP` stellen,
+- `MASQUERADE` in Richtung des Gerätenetzes, damit die Antworten über das
+  Relay zurücklaufen.
+
+Auf der Instanz: eine Route für das Gerätenetz über die Relay-Adresse.
+
+Wichtig bei Netzen, die nur über einen Tunnel erreichbar sind: Ein reines
+`ip route add … via <relay>` genügt nicht, wenn der Tunnel-Endpunkt nur per
+ARP-Auflösung erreichbar ist. Der Zwischenrouter muss die Zieladresse
+tatsächlich routen können. Wo das nicht der Fall ist, hat sich ein zweiter
+WireGuard-Tunnel durch den bestehenden bewährt: Die Instanz verbindet sich zum
+Tunnel-Endpunkt, dessen `AllowedIPs` das Gerätenetz umfassen, und das Relay
+leitet daraus weiter.
+
+### Zugriff auf die Oberfläche aus dem Gerätenetz
+
+Soll ein Rechner aus dem Gerätenetz die Oberfläche öffnen, braucht es die
+Gegenrichtung: eine DNAT-Regel auf dem Relay (Port der Oberfläche auf die
+Instanz) plus eine `MASQUERADE`-Regel für genau diesen Fluss, weil das
+Gerätenetz die Adresse der Instanz nicht kennt. Beide Richtungen gehören in
+dieselbe systemd-Unit, die die Regeln setzt — und in derselben Unit wieder
+entfernt (`ExecStop`), damit ein Rückbau vollständig ist.
+
+### Persistenz und Stilllegung
+
+- Netzregeln gehören in eine `Type=oneshot`-Unit mit `RemainAfterExit=yes`,
+  die beim Boot läuft und beim Stoppen aufräumt.
+- Ein stillgelegter Dienst darf nicht nur `disabled` sein. `systemctl disable`
+  entfernt nur den Autostart; jeder Aufruf kann ihn weiterhin starten.
+  `systemctl mask` verhindert das, scheitert aber, wenn die Unit-Datei in
+  `/etc/systemd/system` liegt — dann Datei sichern und durch einen Symlink auf
+  `/dev/null` ersetzen.
+- Ein `.path`-Trigger für das Software-Update startet den Dienst ebenfalls,
+  wenn eine Update-Anfrage im Dateisystem erscheint. Wird die Instanz nicht
+  mehr über diesen Pfad betrieben, muss der Trigger mit maskiert werden.
+- Nach dem Umbau gehört ein echter Neustart dazu: Ein `systemctl start` beweist
+  nichts über den Autostart. Ein Dienst, der nur `active` ist und nicht
+  `enabled`, startet nach einem Reboot nicht.
+
+### Zugriffsschutz
+
+Die Oberfläche bringt keine Anmeldung mit. Sie gehört deshalb ausschließlich in
+interne Netze oder hinter einen vorgeschalteten Zugriffsschutz. Wird sie aus
+einem weiteren Netz über ein Relay erreichbar gemacht, kann dort jeder die
+Erfassung starten und stoppen und die Konfiguration ändern.
+
 ## Dokument-Change-Log
+
+- 2026-11-12 — Abschnitt „Betrieb als eigenständige Instanz hinter einem Relay" ergänzt; Anlass/Quelle: Umzug der Referenzinstallation auf einen eigenen Container mit Relay über den vorhandenen Tunnel; Prüfstatus: Vorgehen auf der Referenzinstallation umgesetzt und mit zwei echten Reboots geprüft.
 
 - 2026-11-11 — Abschnitt „Erreichbarkeits-Zeitreihe prüfen" ergänzt; Anlass/Quelle: Schema 3 mit `device_availability_hours` und Nachladebefehl in 4.10.0; Prüfstatus: Migration und Nachladen auf der Referenzinstallation ausgeführt, Zählerstände geprüft.
 

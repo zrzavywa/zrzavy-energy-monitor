@@ -152,6 +152,8 @@ Die geltende Lizenz ergibt sich aus der Datei `LICENSE` im Repository.
 
 ## Dokument-Change-Log
 
+- 2026-11-12 — Abschnitt „Betrieb als eigenständige Instanz hinter einem Relay" in `docs/operation.md` ergänzt; Anlass/Quelle: Umzug der Referenzinstallation, Reboot-Festigkeit geprüft; Prüfstatus: Umsetzung und Tests abgeglichen, kein Produktverhalten geändert.
+
 - 2026-11-11 — Produktstand auf 4.10.1 gehoben; Anlass/Quelle: Migrationspfad prüft die Quelldatenbank nur noch einmal und nutzt für rein additive Migrationen quick_check; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS.
 
 - 2026-11-11 — Produktstand auf 4.10.0 gehoben; Anlass/Quelle: Erreichbarkeits-Zeitreihe je Gerät auf der Seite „Datenerfassung" mit Stundenzähler-Protokoll, Schema 3 und Nachladebefehl; Prüfstatus: Umsetzung und Tests abgeglichen, `./scripts/verify.sh` PASS, Migration und Nachladen auf der Referenzinstallation ausgeführt.

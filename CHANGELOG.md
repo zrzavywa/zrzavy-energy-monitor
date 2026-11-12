@@ -6,7 +6,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
-Keine Änderungen.
+### Dokumentation
+
+- `docs/operation.md` beschreibt den Betrieb als eigenständige Instanz hinter
+  einem Relay: Weiterleitung und NAT für die Geräte, DNAT für den Zugriff auf
+  die Oberfläche aus dem Gerätenetz, Persistenz über eine systemd-Unit sowie
+  die Stilllegung mit `mask` statt `disable`. Anlass war der Umzug der
+  Referenzinstallation auf einen eigenen Container; Produktverhalten ändert
+  sich nicht.
 
 ## [4.10.1] — 2026-11-11
 
