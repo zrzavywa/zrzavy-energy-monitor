@@ -33,4 +33,6 @@ curl -s http://127.0.0.1:8787/api/health
 Das Release-Archiv enthält kein `.venv`; die virtuelle Umgebung wird aus dem
 vorherigen Release übernommen. Schema-Migration 2 → 3, `config_schema` bleibt 5.
 
-**Full Changelog**: https://github.com/zrzavywa/zrzavy-energy-monitor/compare/v4.10.0...v4.10.1
+**Full Changelog**: https://github.com/zrzavywa/zrzavy-energy-monitor/compare/v4.8.2...v4.10.1
+
+4.10.0 wurde nie als Release veröffentlicht; sein Inhalt ist in 4.10.1 enthalten.
